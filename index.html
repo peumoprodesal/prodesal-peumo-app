@@ -87,7 +87,7 @@ const MESES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","
 
 // Google Sheets Sync
 const SYNC_URL='https://script.google.com/macros/s/AKfycbxHOxZtHHXvKMZ96XFSh25sEioH3saemN_NvvXFFja9v3G70GFu9_Ya6P9wXJY-A0ls/exec';
-let syncing=false,lastSync=LD('lastSync')||'';
+let syncing=false,lastSync='';
 
 // Equipo técnico precargado
 const EQUIPO=[
@@ -106,6 +106,7 @@ const SV=(k,v)=>{try{localStorage.setItem('pd3_'+k,JSON.stringify(v))}catch{}};
 
 let cfg=LD('cfg')||{nombre:'',abr:'',cargo:'',coord:'Juan Miranda Tobar',cCoord:'Coordinador Programa PRODESAL',contra:'Ignacio Pino Orellana',cContra:'Contraparte Entidad Ejecutora',depto:'DIDECO',unidad:'PRODESAL Peumo',apiKey:''};
 let vis=LD('vis')||[];
+lastSync=LD('lastSync')||'';
 let reu=LD('reu')||[];
 
 // State

@@ -583,6 +583,10 @@ function fillFromOCR(parsed){
   }
   const obs=parsed.observacion_mejorada||parsed.observacion_original||'';
   if(obs){const el=document.getElementById('vx');if(el)el.value=obs}
+  // Store both versions for saving
+  if(!ev)ev={};
+  ev.obs_original=parsed.observacion_original||'';
+  ev.obs_mejorada=parsed.observacion_mejorada||'';
 }
 
 function sV(){
@@ -606,6 +610,9 @@ function sV(){
   const ip=document.getElementById('imgP');
   if(ip?.dataset?.src)nv.foto=ip.dataset.src;
   else if(ev?.foto)nv.foto=ev.foto;
+  // Keep original observation from OCR if available
+  if(ev?.obs_original)nv.obs_original=ev.obs_original;
+  if(ev?.obs_mejorada)nv.obs_mejorada=ev.obs_mejorada;
   
   if(ev?.id)vis=vis.map(x=>x.id===nv.id?nv:x);else vis.push(nv);
   SV('vis',vis);sfv=false;ev=null;R();nf('✅ Visita guardada')
@@ -621,24 +628,27 @@ function rInf(){
   return `
     <b style="font-size:15px;display:block" class="mb">📄 Generar Informes</b>
     <div class="cd">
-      <b style="font-size:13px">📊 Semanal</b>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px">
+      <b style="font-size:13px">📊 Informe Semanal</b>
+      <p class="mu" style="margin:4px 0 8px">Word con detalle de visitas y observaciones</p>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
         <span class="mu">Semana</span>
         <input type="number" class="ip" id="gs" value="${sem}" min="1" max="53" style="width:65px;display:inline-block">
         <span class="mu">(${vs_.length} visitas)</span>
-        <button class="bt bt-b bt-s" onclick="gI('sem')" style="margin-left:auto">⬇️ Descargar</button>
+        <button class="bt bt-b bt-s" onclick="gI('sem')" style="margin-left:auto">⬇️ Descargar Word</button>
       </div>
     </div>
     <div class="cd">
-      <b style="font-size:13px">📅 Mensual</b>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px;margin-bottom:8px">
+      <b style="font-size:13px">📅 Informe Mensual</b>
+      <p class="mu" style="margin:4px 0 8px">Informes Municipal e INDAP del mes</p>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <span class="mu">Mes</span>
         <select class="ip" id="gm" style="width:130px;display:inline-block">${MESES.map((m,i)=>`<option value="${i}" ${i===mi?'selected':''}>${m[0].toUpperCase()+m.slice(1)}</option>`).join('')}</select>
         <span class="mu">(${vm.length} visitas)</span>
       </div>
-      <div style="display:flex;gap:6px">
-        <button class="bt bt-g bt-s" onclick="gI('mun')">⬇️ Municipal</button>
-        <button class="bt bt-o bt-s" onclick="gI('ind')">⬇️ INDAP</button>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="bt bt-g bt-s" onclick="gI('mun')">📝 Municipal (.doc)</button>
+        <button class="bt bt-o bt-s" onclick="gI('ind')">📋 INDAP (.doc)</button>
+        <button class="bt bt-b bt-s" onclick="gExcel()">📊 INDAP Excel (.xlsx)</button>
       </div>
     </div>
     <div class="cd">
@@ -665,16 +675,172 @@ function gI(tipo){
     fn=MESES[m].toUpperCase()+'_2026_'+(tipo==='mun'?'MUNICIPAL':'INDAP')+'.doc';
   }
   const vt=vf.filter(v=>v.tipo==='Visita Técnica'||!v.tipo);
+  
+  // Build visits table with details
   const rows=vt.map(v=>{
     const d=new Date(v.fecha+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long'}).toUpperCase();
     return '<tr><td style="padding:4px 6px;border:1px solid #999;font-size:11px">'+d+'</td><td style="padding:4px 6px;border:1px solid #999;font-size:11px">'+h(v.rut)+'</td><td style="padding:4px 6px;border:1px solid #999;font-size:11px">'+h((v.agricultor||'').toUpperCase())+'</td><td style="padding:4px 6px;border:1px solid #999;font-size:11px">ASESORIA TECNICA</td><td style="padding:4px 6px;border:1px solid #999;font-size:11px">'+ab+'</td><td style="padding:4px 6px;border:1px solid #999;font-size:11px;text-align:center">'+h(v.folio)+'</td></tr>'
   }).join('');
+  
+  // Build detailed observations section (NEW - uses IA text)
+  let obsDetail='';
+  if(vt.length>0){
+    const obsRows=vt.filter(v=>v.observacion).map(v=>{
+      const d=new Date(v.fecha+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long'});
+      const obs=v.obs_mejorada||v.observacion||'';
+      return '<p style="margin:8px 0;font-size:11px"><b>'+h(v.agricultor)+' ('+d+')</b>: '+h(obs)+'</p>';
+    }).join('');
+    if(obsRows) obsDetail='<p style="margin:12px 0 6px;font-size:11px"><b><u>DETALLE DE OBSERVACIONES TÉCNICAS:</u></b></p>'+obsRows;
+  }
+
+  // Build observations summary paragraph for the visits section
+  let visitSummary='';
+  if(tipo!=='sem'){
+    visitSummary='<p style="font-size:11px;margin:8px 0">En cuanto a la estructura definida por INDAP, las visitas del '+h(cfg.cargo.toLowerCase())+' del programa tienen como propósito la evaluación, entrega de información al usuario y validación de rendiciones o avances de proyectos.</p>';
+  }
+  
   const sc=t=>'<tr><td colspan="2" style="background:#DEEBF6;padding:6px 10px;border:1px solid #999"><b style="font-family:Verdana;font-size:11px">'+t+'</b></td></tr>';
   const fo='<p style="text-align:center;color:#999;font-style:italic;margin:20px 0">[📷 INSERTAR FOTOGRAFÍAS]</p>';
-  const doc='<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:letter;margin:2cm 1.8cm}body{font-family:Verdana,sans-serif;font-size:11px;max-width:720px;margin:0 auto}table.m{width:100%;border-collapse:collapse}td{vertical-align:top}</style></head><body><table class="m"><tr><td colspan="2" style="background:#5B9BD5;padding:8px;text-align:center;border:1px solid #999"><b style="color:white;font-size:14px">'+tit+'</b></td></tr><tr><td style="padding:5px 10px;border:1px solid #999;width:50%"><b>Nombre</b></td><td style="padding:5px 10px;border:1px solid #999">'+h((cfg.nombre||'').toUpperCase())+'</td></tr><tr><td style="padding:5px 10px;border:1px solid #999"><b>Unidad Operativa</b></td><td style="padding:5px 10px;border:1px solid #999">'+h(cfg.unidad)+'</td></tr><tr><td style="padding:5px 10px;border:1px solid #999"><b>Nº Visitas</b></td><td style="padding:5px 10px;border:1px solid #999">'+String(vf.length).padStart(2,'0')+'</td></tr><tr><td colspan="2" style="background:#DEEBF6;padding:3px;border:1px solid #999"></td></tr>'+sc('Visitas')+'<tr><td colspan="2" style="padding:10px;border:1px solid #999"><p style="text-align:center;text-decoration:underline;margin:15px 0">VISITAS TECNICAS</p><table style="width:100%;border-collapse:collapse"><tr style="background:#D6E4F0"><th style="padding:4px;border:1px solid #999;font-size:10px">FECHA</th><th style="padding:4px;border:1px solid #999;font-size:10px">RUT</th><th style="padding:4px;border:1px solid #999;font-size:10px">AGRICULTOR</th><th style="padding:4px;border:1px solid #999;font-size:10px">TIPO</th><th style="padding:4px;border:1px solid #999;font-size:10px">ASESOR</th><th style="padding:4px;border:1px solid #999;font-size:10px">FOLIO</th></tr>'+rows+'</table></td></tr>'+sc('Reuniones y Capacitaciones')+'<tr><td colspan="2" style="padding:10px;border:1px solid #999">'+fo+'</td></tr>'+sc('Giras Técnicas / Especialistas')+'<tr><td colspan="2" style="padding:10px;border:1px solid #999">'+fo+'</td></tr>'+sc('Operativos / Parcelas Demostrativas')+'<tr><td colspan="2" style="padding:10px;border:1px solid #999">'+fo+'</td></tr>'+sc('Articulación de Recursos')+'<tr><td colspan="2" style="padding:10px;border:1px solid #999">'+fo+'</td></tr>'+sc('Otras Actividades')+'<tr><td colspan="2" style="padding:10px;border:1px solid #999">'+fo+'</td></tr><tr><td colspan="2" style="padding:40px 10px 10px;border:1px solid #999;text-align:center"><b>'+h((cfg.coord||'').toUpperCase())+'</b><br><u><b>'+h((cfg.cCoord||'').toUpperCase())+'</b></u></td></tr><tr><td colspan="2" style="padding:40px 10px 10px;border:1px solid #999;text-align:center"><b>'+h((cfg.contra||'').toUpperCase())+'</b><br><u><b>'+h((cfg.cContra||'').toUpperCase())+'</b></u><br><b>'+h((cfg.depto||'').toUpperCase())+'</b></td></tr></table></body></html>';
+  
+  const doc='<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:letter;margin:2cm 1.8cm}body{font-family:Verdana,sans-serif;font-size:11px;max-width:720px;margin:0 auto}table.m{width:100%;border-collapse:collapse}td{vertical-align:top}</style></head><body>'
+    +'<table class="m"><tr><td colspan="2" style="background:#5B9BD5;padding:8px;text-align:center;border:1px solid #999"><b style="color:white;font-size:14px">'+tit+'</b></td></tr>'
+    +'<tr><td style="padding:5px 10px;border:1px solid #999;width:50%"><b>Nombre</b></td><td style="padding:5px 10px;border:1px solid #999">'+h((cfg.nombre||'').toUpperCase())+'</td></tr>'
+    +'<tr><td style="padding:5px 10px;border:1px solid #999"><b>Unidad Operativa</b></td><td style="padding:5px 10px;border:1px solid #999">'+h(cfg.unidad)+'</td></tr>'
+    +'<tr><td style="padding:5px 10px;border:1px solid #999"><b>Nº de Visitas realizadas</b></td><td style="padding:5px 10px;border:1px solid #999">'+String(vf.length).padStart(2,'0')+'</td></tr>'
+    +'<tr><td colspan="2" style="background:#DEEBF6;padding:3px;border:1px solid #999"></td></tr>'
+    +sc('Visitas')
+    +'<tr><td colspan="2" style="padding:10px;border:1px solid #999">'
+    +visitSummary
+    +'<p style="text-align:center;text-decoration:underline;margin:15px 0"><b>VISITAS TECNICAS</b></p>'
+    +'<table style="width:100%;border-collapse:collapse"><tr style="background:#D6E4F0"><th style="padding:4px;border:1px solid #999;font-size:10px">FECHA</th><th style="padding:4px;border:1px solid #999;font-size:10px">RUT</th><th style="padding:4px;border:1px solid #999;font-size:10px">AGRICULTOR</th><th style="padding:4px;border:1px solid #999;font-size:10px">TIPO</th><th style="padding:4px;border:1px solid #999;font-size:10px">ASESOR</th><th style="padding:4px;border:1px solid #999;font-size:10px">FOLIO</th></tr>'
+    +rows+'</table>'
+    +obsDetail
+    +fo+'</td></tr>'
+    +sc('Reuniones y Capacitaciones Realizadas (Adjuntar Fotografías)')
+    +'<tr><td colspan="2" style="padding:10px;border:1px solid #999">'+fo+'</td></tr>'
+    +sc('Giras Técnicas / Asesoría de Especialistas (Adjuntar Fotografías)')
+    +'<tr><td colspan="2" style="padding:10px;border:1px solid #999">'+fo+'</td></tr>'
+    +sc('Operativos Veterinarios / Parcelas Demostrativas (Adjuntar Fotografías)')
+    +'<tr><td colspan="2" style="padding:10px;border:1px solid #999">'+fo+'</td></tr>'
+    +sc('Articulación de Recursos (Adjuntar Fotografías)')
+    +'<tr><td colspan="2" style="padding:10px;border:1px solid #999">'+fo+'</td></tr>'
+    +sc('Otras Actividades (Adjuntar Fotografías)')
+    +'<tr><td colspan="2" style="padding:10px;border:1px solid #999">'+fo+'</td></tr>'
+    +'<tr><td colspan="2" style="padding:40px 10px 10px;border:1px solid #999;text-align:center"><b>'+h((cfg.coord||'').toUpperCase())+'</b><br><u><b>'+h((cfg.cCoord||'').toUpperCase())+'</b></u></td></tr>'
+    +'<tr><td colspan="2" style="padding:40px 10px 10px;border:1px solid #999;text-align:center"><b>'+h((cfg.contra||'').toUpperCase())+'</b><br><u><b>'+h((cfg.cContra||'').toUpperCase())+'</b></u><br><b>'+h((cfg.depto||'').toUpperCase())+'</b></td></tr></table></body></html>';
+  
   const blob=new Blob([doc],{type:'application/vnd.ms-word;charset=utf-8'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=fn;a.click();URL.revokeObjectURL(url);
   nf('📄 '+fn);
+}
+
+// ========= INFORME EXCEL INDAP =========
+function gExcel(){
+  const m=+document.getElementById('gm').value;
+  const mesNom=MESES[m].toUpperCase();
+  const vf=vis.filter(v=>v.fecha&&new Date(v.fecha+'T12:00:00').getMonth()===m);
+  const fn=mesNom+'_2026_INDAP.xlsx';
+  
+  // Group activities
+  const actividades=[];
+  
+  // 1. Visitas técnicas
+  const vt=vf.filter(v=>v.tipo==='Visita Técnica'||!v.tipo);
+  if(vt.length>0){
+    // Build detailed text from all visit observations
+    let txt='Durante el mes de '+MESES[m]+' se han realizado '+vt.length+' visitas técnicas en terreno a los usuarios del programa, con el objetivo de atender sus necesidades de acuerdo con el Plan de Trabajo Anual (PTA), el tipo de cultivo o sistema productivo que desarrollan.';
+    const obsTexts=vt.filter(v=>v.observacion||v.obs_mejorada).map(v=>{
+      const obs=v.obs_mejorada||v.observacion;
+      return v.agricultor+': '+obs;
+    });
+    if(obsTexts.length>0) txt+='\n\nDetalle por usuario:\n'+obsTexts.join('\n');
+    actividades.push({nombre:'Visita técnica',detalle:txt});
+  }
+  
+  // 2. Reuniones
+  const reu_v=vf.filter(v=>v.tipo&&v.tipo.toLowerCase().includes('reunion'));
+  if(reu_v.length>0){
+    const txt=reu_v.map(v=>{
+      const d=new Date(v.fecha+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long'});
+      return (v.obs_mejorada||v.observacion||'Reunión realizada el '+d);
+    }).join('\n');
+    actividades.push({nombre:'REUNIONES DE TRABAJO',detalle:txt});
+  }
+  
+  // 3. Other activities by type
+  const otros=vf.filter(v=>v.tipo&&!v.tipo.includes('Visita')&&!v.tipo.toLowerCase().includes('reunion'));
+  const byTipo={};
+  otros.forEach(v=>{
+    if(!byTipo[v.tipo])byTipo[v.tipo]=[];
+    byTipo[v.tipo].push(v);
+  });
+  Object.keys(byTipo).forEach(t=>{
+    const vlist=byTipo[t];
+    const txt=vlist.map(v=>v.obs_mejorada||v.observacion||'').filter(Boolean).join('\n');
+    actividades.push({nombre:t.toUpperCase(),detalle:txt||'Actividad realizada durante el mes.'});
+  });
+  
+  // If no activities at all, add placeholder
+  if(actividades.length===0) actividades.push({nombre:'Visita técnica',detalle:'Sin actividades registradas para este mes.'});
+  
+  // Generate XLSX using simple XML Spreadsheet format (Excel 2003 XML)
+  let xmlRows='';
+  actividades.forEach((act,i)=>{
+    const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    xmlRows+=`<Row ss:Height="${Math.max(150,act.detalle.length*0.6)}">
+      <Cell ss:StyleID="sNum"><Data ss:Type="Number">${i+1}</Data></Cell>
+      <Cell ss:StyleID="sAct"><Data ss:Type="String">${esc(act.nombre)}</Data></Cell>
+      <Cell ss:StyleID="sDet" ss:MergeAcross="1"><Data ss:Type="String">${esc(act.detalle)}</Data></Cell>
+    </Row>`;
+  });
+  
+  const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  
+  const xml=`<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+<Styles>
+  <Style ss:ID="Default"><Alignment ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11"/></Style>
+  <Style ss:ID="sTitle"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="14" ss:Bold="1"/><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="sLabel"><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="sValue"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/></Style>
+  <Style ss:ID="sSubtitle"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="sHeader"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+  <Style ss:ID="sNum"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+  <Style ss:ID="sAct"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Verdana" ss:Size="12" ss:Bold="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+  <Style ss:ID="sDet"><Alignment ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+</Styles>
+<Worksheet ss:Name="Hoja1">
+  <Table ss:DefaultRowHeight="15">
+    <Column ss:Index="1" ss:Width="30"/>
+    <Column ss:Index="2" ss:Width="420"/>
+    <Column ss:Index="3" ss:Width="100"/>
+    <Column ss:Index="4" ss:Width="600"/>
+    <Row ss:Height="120"><Cell ss:MergeAcross="3"><Data ss:Type="String"> </Data></Cell></Row>
+    <Row ss:Height="19"><Cell ss:MergeAcross="3" ss:StyleID="sTitle"><Data ss:Type="String">INFORME DE ACTIVIDADES MENSUAL EQUIPO TÉCNICO PRODESAL</Data></Cell></Row>
+    <Row ss:Height="6"><Cell><Data ss:Type="String"> </Data></Cell></Row>
+    <Row><Cell ss:MergeAcross="1" ss:StyleID="sLabel"><Data ss:Type="String">NOMBRE:</Data></Cell><Cell ss:MergeAcross="1" ss:StyleID="sValue"><Data ss:Type="String">${esc((cfg.nombre||'').toUpperCase())}</Data></Cell></Row>
+    <Row><Cell ss:MergeAcross="1" ss:StyleID="sLabel"><Data ss:Type="String">RUT:</Data></Cell><Cell ss:MergeAcross="1" ss:StyleID="sValue"><Data ss:Type="String">${esc(cfg.rut||'')}</Data></Cell></Row>
+    <Row><Cell ss:MergeAcross="1" ss:StyleID="sLabel"><Data ss:Type="String">MES DE RENDICIÓN:</Data></Cell><Cell ss:MergeAcross="1" ss:StyleID="sValue"><Data ss:Type="String">${mesNom}</Data></Cell></Row>
+    <Row><Cell ss:MergeAcross="1" ss:StyleID="sLabel"><Data ss:Type="String">CARGO:</Data></Cell><Cell ss:MergeAcross="1" ss:StyleID="sValue"><Data ss:Type="String">${esc((cfg.cargo||'').toUpperCase())}</Data></Cell></Row>
+    <Row ss:Height="6"><Cell><Data ss:Type="String"> </Data></Cell></Row>
+    <Row><Cell ss:MergeAcross="3" ss:StyleID="sSubtitle"><Data ss:Type="String">INFORME DEL CARGO ${esc((cfg.cargo||'').toUpperCase())} - ${mesNom} 2026</Data></Cell></Row>
+    <Row>
+      <Cell ss:StyleID="sHeader"><Data ss:Type="String">Nº</Data></Cell>
+      <Cell ss:StyleID="sHeader"><Data ss:Type="String">ACTIVIDAD PTA/PAS</Data></Cell>
+      <Cell ss:StyleID="sHeader" ss:MergeAcross="1"><Data ss:Type="String">LABORES REALIZADAS</Data></Cell>
+    </Row>
+    ${xmlRows}
+  </Table>
+</Worksheet>
+</Workbook>`;
+  
+  const blob=new Blob([xml],{type:'application/vnd.ms-excel'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=fn;a.click();URL.revokeObjectURL(url);
+  nf('📊 '+fn);
 }
 
 // Init

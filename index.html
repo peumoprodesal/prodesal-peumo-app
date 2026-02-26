@@ -85,6 +85,10 @@ const TV=["Visita Técnica","Asesoría de Especialista","Capacitación","Gira T�
 const OBJ=["Acompañamiento visita técnica","Presentación equipo y asesoramiento","Asesoría técnica manejo cultivo","Seguimiento proyecto inversión (PDI/IFP)","Seguimiento proyecto riego (PRI/PROM)","Certificación proyecto PDI","Evaluación y entrega de información","Validación rendiciones o avances"];
 const MESES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 
+// Google Sheets Sync
+const SYNC_URL='https://script.google.com/macros/s/AKfycbxHOxZtHHXvKMZ96XFSh25sEioH3saemN_NvvXFFja9v3G70GFu9_Ya6P9wXJY-A0ls/exec';
+let syncing=false,lastSync=LD('lastSync')||'';
+
 // Equipo técnico precargado
 const EQUIPO=[
   {nombre:"Valeria Osorio",abr:"V. OSORIO",cargo:"Asesor Técnico"},
@@ -195,9 +199,17 @@ function rCfg(){
         <span id="apiSt" class="mu">${cfg.apiKey?'✅ Key guardada':'⚠️ Sin key'}</span>
       </div>
     </div>
+    <div class="cd" style="border-color:#93c5fd;background:#eff6ff">
+      <b style="font-size:13px;color:var(--b2)">☁️ Sincronización en la nube</b>
+      <p class="mu mb">Las visitas se comparten con todo el equipo vía Google Sheets.</p>
+      <div style="display:flex;gap:6px;align-items:center">
+        <button class="bt bt-b bt-s" id="syncBtn" onclick="syncFromCloud()">☁️ Sincronizar</button>
+        <span class="mu">${lastSync?'Última: '+lastSync:'Sin sincronizar aún'}</span>
+      </div>
+    </div>
     <div class="cd" style="border-color:#fecaca">
-      <b style="font-size:13px;color:var(--r)">📦 Respaldo de datos</b>
-      <p class="mu mb">Tus visitas se guardan en este navegador. Exporta para hacer respaldo o compartir.</p>
+      <b style="font-size:13px;color:var(--r)">📦 Respaldo local</b>
+      <p class="mu mb">Exporta/importa tus datos como archivo JSON.</p>
       <div style="display:flex;gap:6px">
         <button class="bt bt-x bt-s" onclick="xprt()">📤 Exportar</button>
         <button class="bt bt-x bt-s" onclick="document.getElementById('impF').click()">📥 Importar</button>
@@ -352,7 +364,10 @@ function rVL(){
   return `
     <div style="display:flex;justify-content:space-between;align-items:center" class="mb">
       <b style="font-size:15px">📋 Visitas (${vis.length})</b>
-      <button class="bt bt-b bt-s" onclick="sfv=true;ev=null;R()">➕ Nueva</button>
+      <div style="display:flex;gap:6px">
+        <button class="bt bt-s" id="syncBtn2" onclick="syncFromCloud()" style="background:#eff6ff;color:var(--b2);border:1px solid #93c5fd;font-size:11px">☁️ Sync</button>
+        <button class="bt bt-b bt-s" onclick="sfv=true;ev=null;R()">➕ Nueva</button>
+      </div>
     </div>
     ${!s.length?'<div class="empty"><i>📝</i>Sin visitas registradas.<br>Ve a 👥 Nómina, busca un agricultor y registra desde ahí.</div>':s.map(v=>`<div class="cd">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -616,9 +631,66 @@ function sV(){
   if(ev?.obs_mejorada)nv.obs_mejorada=ev.obs_mejorada;
   
   if(ev?.id)vis=vis.map(x=>x.id===nv.id?nv:x);else vis.push(nv);
-  SV('vis',vis);sfv=false;ev=null;R();nf('✅ Visita guardada')
+  SV('vis',vis);sfv=false;ev=null;R();nf('✅ Visita guardada');
+  syncToCloud(nv); // Sync to Google Sheets
 }
-function dV(id){if(!confirm('¿Eliminar?'))return;vis=vis.filter(v=>v.id!==id);SV('vis',vis);R();nf('🗑️ Eliminada')}
+function dV(id){if(!confirm('¿Eliminar?'))return;vis=vis.filter(v=>v.id!==id);SV('vis',vis);R();nf('🗑️ Eliminada');deleteFromCloud(id)}
+
+// ========= GOOGLE SHEETS SYNC =========
+async function syncToCloud(visita){
+  if(!SYNC_URL)return;
+  try{
+    await fetch(SYNC_URL+'?action=write',{method:'POST',body:JSON.stringify(visita),headers:{'Content-Type':'text/plain'}});
+  }catch(e){console.log('Sync write error:',e)}
+}
+
+async function syncFromCloud(){
+  if(syncing||!SYNC_URL)return;
+  syncing=true;
+  const btn=document.getElementById('syncBtn');
+  if(btn){btn.innerHTML='🔄 Sincronizando...';btn.disabled=true}
+  try{
+    const r=await fetch(SYNC_URL+'?action=read');
+    const d=await r.json();
+    if(d.visitas&&d.visitas.length>0){
+      // Merge: cloud wins for same id, keep local-only
+      const cloudMap={};
+      d.visitas.forEach(v=>{cloudMap[v.id]=v});
+      const localOnly=vis.filter(v=>!cloudMap[v.id]);
+      // Upload local-only to cloud
+      for(const v of localOnly){
+        try{await fetch(SYNC_URL+'?action=write',{method:'POST',body:JSON.stringify(v),headers:{'Content-Type':'text/plain'}})}catch{}
+      }
+      // Merge all
+      const merged=[...d.visitas,...localOnly];
+      vis=merged;
+      SV('vis',vis);
+      lastSync=new Date().toLocaleString('es-CL');
+      SV('lastSync',lastSync);
+      nf('☁️ Sincronizado: '+vis.length+' visitas');
+    }else if(vis.length>0){
+      // Cloud empty, upload all local
+      try{
+        await fetch(SYNC_URL+'?action=sync',{method:'POST',body:JSON.stringify({visitas:vis}),headers:{'Content-Type':'text/plain'}});
+        lastSync=new Date().toLocaleString('es-CL');
+        SV('lastSync',lastSync);
+        nf('☁️ Subidas '+vis.length+' visitas a la nube');
+      }catch{}
+    }else{
+      nf('☁️ Sin visitas que sincronizar');
+    }
+  }catch(e){
+    nf('⚠️ Error de conexión: '+e.message);
+  }
+  syncing=false;
+  if(btn){btn.innerHTML='☁️ Sincronizar';btn.disabled=false}
+  R();
+}
+
+async function deleteFromCloud(id){
+  if(!SYNC_URL)return;
+  try{await fetch(SYNC_URL+'?action=delete&id='+id)}catch(e){console.log('Sync delete error:',e)}
+}
 
 // ========= INFORMES =========
 function rInf(){
@@ -847,6 +919,8 @@ function gExcel(){
 // Init
 if(cfg.nombre)document.getElementById('hs').textContent=cfg.nombre+' — '+cfg.cargo;
 rT();R();
+// Auto-sync on load
+setTimeout(()=>{if(cfg.nombre&&SYNC_URL)syncFromCloud()},1500);
 </script>
 </body>
 </html>

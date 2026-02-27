@@ -751,6 +751,7 @@ function rInf(){
   if(!cfg.nombre)return '<div class="warn">⚠️ Ve a <b>⚙️ Config</b> primero</div>';
   const sem=wk(new Date()),mi=new Date().getMonth();
   const normT=s=>(s||'').replace(/\.\s*/g,'.').toUpperCase().trim();
+  
   // Coverage metrics
   const META_TEC=3;
   const META_AP=200;
@@ -775,18 +776,18 @@ function rInf(){
   const totalMetaTec=cobData.filter(c=>c.tipo==='tec').reduce((s,c)=>s+c.meta,0);
   const totalMeta=totalMetaTec+META_AP;
   const totalPct=totalMeta?Math.round(totalVisitas/totalMeta*100):0;
-  
-  // Summary by Rubro
+
+  // Resumen por Rubro
   const rubroMap={};
   vis.forEach(v=>{const r=v.rubro||'SIN RUBRO';rubroMap[r]=(rubroMap[r]||0)+1});
   const rubroRows=Object.entries(rubroMap).sort((a,b)=>b[1]-a[1]);
-  
-  // Summary by Sector
+
+  // Resumen por Sector
   const sectorMap={};
   vis.forEach(v=>{const s=v.sector||'SIN SECTOR';sectorMap[s]=(sectorMap[s]||0)+1});
   const sectorRows=Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]);
-  
-  // My visits for counts
+
+  // My visits & period counts
   const myVis=vis.filter(v=>normT(v.asesor)===normT(cfg.abr)||!v.asesor);
   const vs_=vis.filter(v=>v.fecha&&wk(new Date(v.fecha+'T12:00:00'))===sem);
   const vm=vis.filter(v=>v.fecha&&new Date(v.fecha+'T12:00:00').getMonth()===mi);
@@ -808,7 +809,7 @@ function rInf(){
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <span class="mu">Semana</span>
         <input type="number" class="ip" id="gs" value="${sem}" min="1" max="53" style="width:65px;display:inline-block">
-        <span class="mu">(${vs_.length} visitas)</span>
+        <span class="mu">(${vs_.length} visitas totales)</span>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="bt bt-g bt-s" onclick="gI('sem','mun')">📝 Municipal</button>
@@ -822,7 +823,7 @@ function rInf(){
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <span class="mu">Mes</span>
         <select class="ip" id="gm" style="width:130px;display:inline-block">${MESES.map((m,i)=>'<option value="'+i+'" '+(i===mi?'selected':'')+'>'+m[0].toUpperCase()+m.slice(1)+'</option>').join('')}</select>
-        <span class="mu">(${vm.length} visitas)</span>
+        <span class="mu">(${vm.length} visitas totales)</span>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="bt bt-g bt-s" onclick="gI('mes','mun')">📝 Municipal</button>
@@ -868,7 +869,7 @@ function rInf(){
     <div class="cd">
       <b style="font-size:13px">🌱 Visitas por Rubro</b>
       <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12px">
-        <tr style="background:#f1f5f9"><th style="padding:6px 8px;text-align:left;border-bottom:2px solid #e2e8f0">Rubro</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:60px">Visitas</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:55px">%</th></tr>
+        <tr style="background:#f1f5f9"><th style="padding:6px 8px;text-align:left;border-bottom:2px solid #e2e8f0">Rubro</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:60px">Nº</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:55px">%</th></tr>
         ${rubroRows.map(([r,c])=>'<tr><td style="padding:5px 8px;border-bottom:1px solid #f1f5f9">'+h(r)+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;font-weight:600">'+c+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#6b7280">'+(totalVisitas?Math.round(c/totalVisitas*100):0)+'%</td></tr>').join('')}
         <tr style="background:#f8fafc;font-weight:700"><td style="padding:6px 8px;border-top:2px solid #e2e8f0">Total</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">${totalVisitas}</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">100%</td></tr>
       </table>
@@ -876,7 +877,7 @@ function rInf(){
     <div class="cd">
       <b style="font-size:13px">📍 Visitas por Sector</b>
       <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12px">
-        <tr style="background:#f1f5f9"><th style="padding:6px 8px;text-align:left;border-bottom:2px solid #e2e8f0">Sector</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:60px">Visitas</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:55px">%</th></tr>
+        <tr style="background:#f1f5f9"><th style="padding:6px 8px;text-align:left;border-bottom:2px solid #e2e8f0">Sector</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:60px">Nº</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:55px">%</th></tr>
         ${sectorRows.map(([s,c])=>'<tr><td style="padding:5px 8px;border-bottom:1px solid #f1f5f9">'+h(s)+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;font-weight:600">'+c+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#6b7280">'+(totalVisitas?Math.round(c/totalVisitas*100):0)+'%</td></tr>').join('')}
         <tr style="background:#f8fafc;font-weight:700"><td style="padding:6px 8px;border-top:2px solid #e2e8f0">Total</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">${totalVisitas}</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">100%</td></tr>
       </table>
@@ -903,7 +904,7 @@ function getFilteredVis(periodo,formato){
     const sufijo=formato==='mun'?'MUNICIPAL':'INDAP';
     tit='INFORME MES DE '+MESES[m].toUpperCase()+' 2026';fn=MESES[m].toUpperCase()+'_2026_'+sufijo;
   }
-  return {vf,tit,fn,asesorNombre,asesorCargo,asesorSel};
+  return {vf,tit,fn,asesorNombre,asesorCargo,asesorSel,periodo};
 }
 
 function gI(periodo,formato){
@@ -926,10 +927,7 @@ function gI(periodo,formato){
     if(obsRows) obsDetail='<p style="margin:14px 0 6px;font-family:Verdana;font-size:8.5pt"><b><u>DETALLE DE OBSERVACIONES T\u00c9CNICAS:</u></b></p>'+obsRows;
   }
 
-  let visitSummary='';
-  if(formato!=='sem'){
-    visitSummary='<p style="font-family:Verdana;font-size:8.5pt;margin:8px 0">En cuanto a la estructura definida por INDAP, las visitas del '+h(asesorCargo.toLowerCase())+' del programa tienen como prop\u00f3sito la evaluaci\u00f3n, entrega de informaci\u00f3n al usuario y validaci\u00f3n de rendiciones o avances de proyectos.</p>';
-  }
+  let visitSummary='<p style="font-family:Verdana;font-size:8.5pt;margin:8px 0">En cuanto a la estructura definida por INDAP, las visitas del '+h(asesorCargo.toLowerCase())+' del programa tienen como prop\u00f3sito la evaluaci\u00f3n, entrega de informaci\u00f3n al usuario y validaci\u00f3n de rendiciones o avances de proyectos.</p>';
   
   const sc=t=>'<tr><td colspan="2" style="background:#DEEBF6;padding:6px 10px;border:1px solid #999"><b style="font-family:Verdana;font-size:8.5pt">'+t+'</b></td></tr>';
   const fo='<p style="text-align:center;color:#999;font-style:italic;margin:20px 0;font-family:Verdana;font-size:8.5pt">[Insertar fotograf\u00edas]</p>';
@@ -972,22 +970,20 @@ function gI(periodo,formato){
 
 // ========= INFORME EXCEL INDAP =========
 function gExcel(periodo){
-  const {vf,asesorNombre}=getFilteredVis(periodo,'ind');
-  let mesNom,fn;
+  const {vf,asesorNombre,periodo:per}=getFilteredVis(periodo,'ind');
+  let mesNom,fn,periodoTxt;
   if(periodo==='sem'){
     const s=+document.getElementById('gs').value;
-    mesNom='SEMANA_'+s;fn='SEMANA_'+s+'_2026_INDAP.xlsx';
+    mesNom='SEMANA_'+s;fn='SEMANA_'+s+'_2026_INDAP.xlsx';periodoTxt='la semana '+s;
   }else{
     const m=+document.getElementById('gm').value;
-    mesNom=MESES[m].toUpperCase();fn=mesNom+'_2026_INDAP.xlsx';
+    mesNom=MESES[m].toUpperCase();fn=mesNom+'_2026_INDAP.xlsx';periodoTxt='el mes de '+MESES[m];
   }
   
-  // Group activities
   const actividades=[];
   const vt=vf.filter(v=>v.tipo==='Visita T\u00e9cnica'||!v.tipo);
   if(vt.length>0){
-    const m2=periodo==='sem'?'la semana':'el mes de '+mesNom.toLowerCase();
-    let txt='Durante '+m2+' se han realizado '+vt.length+' visitas t\u00e9cnicas en terreno a los usuarios del programa, con el objetivo de atender sus necesidades de acuerdo con el Plan de Trabajo Anual (PTA), el tipo de cultivo o sistema productivo que desarrollan.';
+    let txt='Durante '+periodoTxt+' se han realizado '+vt.length+' visitas t\u00e9cnicas en terreno a los usuarios del programa, con el objetivo de atender sus necesidades de acuerdo con el Plan de Trabajo Anual (PTA), el tipo de cultivo o sistema productivo que desarrollan.';
     const obsTexts=vt.filter(v=>v.observacion||v.obs_mejorada).map(v=>{
       const obs=v.obs_mejorada||v.observacion;
       return v.agricultor+': '+obs;
@@ -1026,92 +1022,6 @@ function gExcel(periodo){
   const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 
     const xml=`<?xml version="1.0" encoding="UTF-8"?>
-<?mso-application progid="Excel.Sheet"?>
-<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
- xmlns:o="urn:schemas-microsoft-com:office:office"
- xmlns:x="urn:schemas-microsoft-com:office:excel"
- xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
-<Styles>
-  <Style ss:ID="Default"><Alignment ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11"/></Style>
-  <Style ss:ID="sTitle"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="14" ss:Bold="1"/><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/></Style>
-  <Style ss:ID="sLabel"><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/></Style>
-  <Style ss:ID="sValue"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/></Style>
-  <Style ss:ID="sSubtitle"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/></Style>
-  <Style ss:ID="sHeader"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
-  <Style ss:ID="sNum"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
-  <Style ss:ID="sAct"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Verdana" ss:Size="12" ss:Bold="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
-  <Style ss:ID="sDet"><Alignment ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
-</Styles>
-<Worksheet ss:Name="Hoja1">
-  <Table ss:DefaultRowHeight="15">
-    <Column ss:Index="1" ss:Width="30"/>
-    <Column ss:Index="2" ss:Width="420"/>
-    <Column ss:Index="3" ss:Width="100"/>
-    <Column ss:Index="4" ss:Width="600"/>
-    <Row ss:Height="120"><Cell ss:MergeAcross="3"><Data ss:Type="String"> </Data></Cell></Row>
-    <Row ss:Height="19"><Cell ss:MergeAcross="3" ss:StyleID="sTitle"><Data ss:Type="String">INFORME DE ACTIVIDADES MENSUAL EQUIPO TÉCNICO PRODESAL</Data></Cell></Row>
-    <Row ss:Height="6"><Cell><Data ss:Type="String"> </Data></Cell></Row>
-    <Row><Cell ss:MergeAcross="1" ss:StyleID="sLabel"><Data ss:Type="String">NOMBRE:</Data></Cell><Cell ss:MergeAcross="1" ss:StyleID="sValue"><Data ss:Type="String">${esc((cfg.nombre||'').toUpperCase())}</Data></Cell></Row>
-    <Row><Cell ss:MergeAcross="1" ss:StyleID="sLabel"><Data ss:Type="String">RUT:</Data></Cell><Cell ss:MergeAcross="1" ss:StyleID="sValue"><Data ss:Type="String">${esc(cfg.rut||'')}</Data></Cell></Row>
-    <Row><Cell ss:MergeAcross="1" ss:StyleID="sLabel"><Data ss:Type="String">MES DE RENDICIÓN:</Data></Cell><Cell ss:MergeAcross="1" ss:StyleID="sValue"><Data ss:Type="String">${mesNom}</Data></Cell></Row>
-    <Row><Cell ss:MergeAcross="1" ss:StyleID="sLabel"><Data ss:Type="String">CARGO:</Data></Cell><Cell ss:MergeAcross="1" ss:StyleID="sValue"><Data ss:Type="String">${esc((cfg.cargo||'').toUpperCase())}</Data></Cell></Row>
-    <Row ss:Height="6"><Cell><Data ss:Type="String"> </Data></Cell></Row>
-    <Row><Cell ss:MergeAcross="3" ss:StyleID="sSubtitle"><Data ss:Type="String">INFORME DEL CARGO ${esc((cfg.cargo||'').toUpperCase())} - ${mesNom} 2026</Data></Cell></Row>
-    <Row>
-      <Cell ss:StyleID="sHeader"><Data ss:Type="String">Nº</Data></Cell>
-      <Cell ss:StyleID="sHeader"><Data ss:Type="String">ACTIVIDAD PTA/PAS</Data></Cell>
-      <Cell ss:StyleID="sHeader" ss:MergeAcross="1"><Data ss:Type="String">LABORES REALIZADAS</Data></Cell>
-    </Row>
-    ${xmlRows}
-  </Table>
-</Worksheet>
-</Workbook>`;
-  
-  const blob=new Blob([xml],{type:'application/vnd.ms-excel'});
-  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=fn;a.click();URL.revokeObjectURL(url);
-  nf('📊 '+fn);
-}
-  
-  // 2. Reuniones
-  const reu_v=vf.filter(v=>v.tipo&&v.tipo.toLowerCase().includes('reunion'));
-  if(reu_v.length>0){
-    const txt=reu_v.map(v=>{
-      const d=new Date(v.fecha+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long'});
-      return (v.obs_mejorada||v.observacion||'Reunión realizada el '+d);
-    }).join('\n');
-    actividades.push({nombre:'REUNIONES DE TRABAJO',detalle:txt});
-  }
-  
-  // 3. Other activities by type
-  const otros=vf.filter(v=>v.tipo&&!v.tipo.includes('Visita')&&!v.tipo.toLowerCase().includes('reunion'));
-  const byTipo={};
-  otros.forEach(v=>{
-    if(!byTipo[v.tipo])byTipo[v.tipo]=[];
-    byTipo[v.tipo].push(v);
-  });
-  Object.keys(byTipo).forEach(t=>{
-    const vlist=byTipo[t];
-    const txt=vlist.map(v=>v.obs_mejorada||v.observacion||'').filter(Boolean).join('\n');
-    actividades.push({nombre:t.toUpperCase(),detalle:txt||'Actividad realizada durante el mes.'});
-  });
-  
-  // If no activities at all, add placeholder
-  if(actividades.length===0) actividades.push({nombre:'Visita técnica',detalle:'Sin actividades registradas para este mes.'});
-  
-  // Generate XLSX using simple XML Spreadsheet format (Excel 2003 XML)
-  let xmlRows='';
-  actividades.forEach((act,i)=>{
-    const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    xmlRows+=`<Row ss:Height="${Math.max(150,act.detalle.length*0.6)}">
-      <Cell ss:StyleID="sNum"><Data ss:Type="Number">${i+1}</Data></Cell>
-      <Cell ss:StyleID="sAct"><Data ss:Type="String">${esc(act.nombre)}</Data></Cell>
-      <Cell ss:StyleID="sDet" ss:MergeAcross="1"><Data ss:Type="String">${esc(act.detalle)}</Data></Cell>
-    </Row>`;
-  });
-  
-  const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-  
-  const xml=`<?xml version="1.0" encoding="UTF-8"?>
 <?mso-application progid="Excel.Sheet"?>
 <Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
  xmlns:o="urn:schemas-microsoft-com:office:office"

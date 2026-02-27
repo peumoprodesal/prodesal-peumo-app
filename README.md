@@ -19,10 +19,10 @@ App web para el equipo técnico del Programa PRODESAL Peumo (INDAP - Municipalid
 ## Equipo técnico
 
 - Juan Miranda Tobar — Coordinador
-- Felipe Osorio Pérez — Asesor Técnico
+- Felipe Osorio Pérez — Asesor Profesional
 - Rodrigo Marín — Asesor Técnico
 - A. Maulén — Asesor Técnico
-- M. Rojas — Asesor Profesional
+- M. Rojas — Asesor Técnico
 
 ## Tecnología
 

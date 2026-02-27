@@ -753,21 +753,33 @@ function rInf(){
   const myVis=vis.filter(v=>v.asesor===cfg.abr||v.asesor===cfg.nombre||!v.asesor);
   const vs_=myVis.filter(v=>v.fecha&&wk(new Date(v.fecha+'T12:00:00'))===sem);
   const vm=myVis.filter(v=>v.fecha&&new Date(v.fecha+'T12:00:00').getMonth()===mi);
-  // Coverage metrics: 3 visits/year per farmer per technician
-  const META_VISITAS=3;
+  // Coverage metrics
+  const META_TEC=3; // 3 visitas/usuario/año por técnico
+  const META_AP=200; // 200 visitas/año para asesor profesional
   const cobData=[];
+  // Normalize tecnico matching: "R. CONTRERAS" matches "R.CONTRERAS"
+  const normT=s=>(s||'').replace(/\.\s*/g,'.').toUpperCase().trim();
   const tecnicos=EQUIPO.filter(e=>e.cargo==='Asesor Técnico');
   tecnicos.forEach(t=>{
-    const farmers=U.filter(u=>(u.tecnico||'').toUpperCase().includes(t.abr.split('.')[0].trim().toUpperCase()));
-    const tVis=vis.filter(v=>(v.asesor||'')===t.abr||(v.asesor||'').includes(t.abr.split('.')[0]));
+    const tNorm=normT(t.abr);
+    const farmers=U.filter(u=>normT(u.tecnico)===tNorm);
+    const tVis=vis.filter(v=>normT(v.asesor)===tNorm);
     const rutsVisitados=new Set(tVis.map(v=>v.rut).filter(Boolean));
-    const metaTotal=farmers.length*META_VISITAS;
-    cobData.push({nombre:t.nombre,abr:t.abr,farmers:farmers.length,visitasHechas:tVis.length,rutsVisitados:rutsVisitados.size,meta:metaTotal,pct:metaTotal?Math.round(tVis.length/metaTotal*100):0});
+    const metaTotal=farmers.length*META_TEC;
+    cobData.push({nombre:t.nombre,abr:t.abr,farmers:farmers.length,visitasHechas:tVis.length,rutsVisitados:rutsVisitados.size,meta:metaTotal,pct:metaTotal?Math.round(tVis.length/metaTotal*100):0,tipo:'tec'});
   });
+  // Asesor Profesional
+  const ap=EQUIPO.find(e=>e.cargo==='Asesor Profesional');
+  if(ap){
+    const apVis=vis.filter(v=>normT(v.asesor)===normT(ap.abr));
+    const apRuts=new Set(apVis.map(v=>v.rut).filter(Boolean));
+    cobData.push({nombre:ap.nombre,abr:ap.abr,farmers:U.length,visitasHechas:apVis.length,rutsVisitados:apRuts.size,meta:META_AP,pct:META_AP?Math.round(apVis.length/META_AP*100):0,tipo:'ap'});
+  }
   const totalFarmers=U.length;
   const totalVisitas=vis.length;
   const totalRutsVisitados=new Set(vis.map(v=>v.rut).filter(Boolean)).size;
-  const totalMeta=totalFarmers*META_VISITAS;
+  const totalMetaTec=cobData.filter(c=>c.tipo==='tec').reduce((s,c)=>s+c.meta,0);
+  const totalMeta=totalMetaTec+META_AP;
   const totalPct=totalMeta?Math.round(totalVisitas/totalMeta*100):0;
   return `
     <b style="font-size:15px;display:block" class="mb">📄 Generar Informes</b>
@@ -813,15 +825,15 @@ function rInf(){
       </div>
     </div>
     <div class="cd" style="border-color:#a78bfa;background:#f5f3ff">
-      <b style="font-size:13px;color:#7c3aed">🎯 Cobertura de Visitas (Meta: ${META_VISITAS} visitas/usuario/año)</b>
-      <p class="mu" style="margin:4px 0 10px">Avance por técnico hacia la meta anual</p>
+      <b style="font-size:13px;color:#7c3aed">🎯 Cobertura de Visitas</b>
+      <p class="mu" style="margin:4px 0 10px">Técnicos: ${META_TEC} visitas/usuario/año · Asesor Profesional: ${META_AP} visitas/año</p>
       <div style="display:flex;flex-direction:column;gap:10px">
         ${cobData.map(t=>{
           const barColor=t.pct>=80?'#22c55e':t.pct>=40?'#f59e0b':'#ef4444';
           return '<div style="background:white;border-radius:8px;padding:10px 12px">'+
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
             '<b style="font-size:12px">'+t.abr+'</b>'+
-            '<span style="font-size:11px;color:#6b7280">'+t.rutsVisitados+'/'+t.farmers+' usuarios visitados</span>'+
+            '<span style="font-size:11px;color:#6b7280">'+t.rutsVisitados+'/'+t.farmers+' usuarios · meta: '+(t.tipo==='ap'?'${META_AP} vis/año':t.meta+' vis')+'</span>'+
             '</div>'+
             '<div style="background:#e5e7eb;border-radius:4px;height:18px;overflow:hidden;position:relative">'+
             '<div style="background:'+barColor+';height:100%;width:'+Math.min(t.pct,100)+'%;border-radius:4px;transition:width 0.5s"></div>'+

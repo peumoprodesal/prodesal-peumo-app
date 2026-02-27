@@ -753,7 +753,7 @@ function rInf(){
   const normT=s=>(s||'').replace(/\.\s*/g,'.').toUpperCase().trim();
   
   // Coverage metrics
-  const META_TEC=3;
+  const META_TEC=400;
   const META_AP=200;
   const cobData=[];
   const tecnicos=EQUIPO.filter(e=>e.cargo==='Asesor Técnico');
@@ -762,7 +762,7 @@ function rInf(){
     const farmers=U.filter(u=>normT(u.tecnico)===tNorm);
     const tVis=vis.filter(v=>normT(v.asesor)===tNorm);
     const rutsVis=new Set(tVis.map(v=>v.rut).filter(Boolean));
-    const metaTotal=farmers.length*META_TEC;
+    const metaTotal=META_TEC;
     cobData.push({nombre:t.nombre,abr:t.abr,farmers:farmers.length,visitasHechas:tVis.length,rutsVisitados:rutsVis.size,meta:metaTotal,pct:metaTotal?Math.round(tVis.length/metaTotal*100):0,tipo:'tec'});
   });
   const ap=EQUIPO.find(e=>e.cargo==='Asesor Profesional');
@@ -777,13 +777,15 @@ function rInf(){
   const totalMeta=totalMetaTec+META_AP;
   const totalPct=totalMeta?Math.round(totalVisitas/totalMeta*100):0;
 
-  // Resumen por Rubro
+  // Resumen por Rubro (incluye todos los rubros definidos)
   const rubroMap={};
+  RUBROS.forEach(r=>{rubroMap[r]=0});
   vis.forEach(v=>{const r=v.rubro||'SIN RUBRO';rubroMap[r]=(rubroMap[r]||0)+1});
   const rubroRows=Object.entries(rubroMap).sort((a,b)=>b[1]-a[1]);
 
-  // Resumen por Sector
+  // Resumen por Sector (incluye todos los sectores definidos)
   const sectorMap={};
+  SECTORES.forEach(s=>{sectorMap[s]=0});
   vis.forEach(v=>{const s=v.sector||'SIN SECTOR';sectorMap[s]=(sectorMap[s]||0)+1});
   const sectorRows=Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]);
 
@@ -841,7 +843,7 @@ function rInf(){
     </div>
     <div class="cd" style="border-color:#a78bfa;background:#f5f3ff">
       <b style="font-size:13px;color:#7c3aed">🎯 Cobertura de Visitas</b>
-      <p class="mu" style="margin:4px 0 10px">Técnicos: ${META_TEC} vis/usuario/año · Asesor Profesional: ${META_AP} vis/año</p>
+      <p class="mu" style="margin:4px 0 10px">Técnicos: ${META_TEC} vis/año · Asesor Profesional: ${META_AP} vis/año</p>
       <div style="display:flex;flex-direction:column;gap:10px">
         ${cobData.map(t=>{
           const barColor=t.pct>=80?'#22c55e':t.pct>=40?'#f59e0b':'#ef4444';
@@ -870,7 +872,7 @@ function rInf(){
       <b style="font-size:13px">🌱 Visitas por Rubro</b>
       <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12px">
         <tr style="background:#f1f5f9"><th style="padding:6px 8px;text-align:left;border-bottom:2px solid #e2e8f0">Rubro</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:60px">Nº</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:55px">%</th></tr>
-        ${rubroRows.map(([r,c])=>'<tr><td style="padding:5px 8px;border-bottom:1px solid #f1f5f9">'+h(r)+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;font-weight:600">'+c+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#6b7280">'+(totalVisitas?Math.round(c/totalVisitas*100):0)+'%</td></tr>').join('')}
+        ${rubroRows.map(([r,c])=>'<tr style="'+(c===0?'background:#fef2f2':'')+'"><td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;'+(c===0?'color:#dc2626;font-weight:600':'')+'">'+h(r)+(c===0?' ⚠️':'')+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;font-weight:600;'+(c===0?'color:#dc2626':'')+'">'+c+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#6b7280">'+(totalVisitas?Math.round(c/totalVisitas*100):0)+'%</td></tr>').join('')}
         <tr style="background:#f8fafc;font-weight:700"><td style="padding:6px 8px;border-top:2px solid #e2e8f0">Total</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">${totalVisitas}</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">100%</td></tr>
       </table>
     </div>
@@ -878,7 +880,7 @@ function rInf(){
       <b style="font-size:13px">📍 Visitas por Sector</b>
       <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12px">
         <tr style="background:#f1f5f9"><th style="padding:6px 8px;text-align:left;border-bottom:2px solid #e2e8f0">Sector</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:60px">Nº</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:55px">%</th></tr>
-        ${sectorRows.map(([s,c])=>'<tr><td style="padding:5px 8px;border-bottom:1px solid #f1f5f9">'+h(s)+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;font-weight:600">'+c+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#6b7280">'+(totalVisitas?Math.round(c/totalVisitas*100):0)+'%</td></tr>').join('')}
+        ${sectorRows.map(([s,c])=>'<tr style="'+(c===0?'background:#fef2f2':'')+'"><td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;'+(c===0?'color:#dc2626;font-weight:600':'')+'">'+h(s)+(c===0?' ⚠️':'')+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;font-weight:600;'+(c===0?'color:#dc2626':'')+'">'+c+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#6b7280">'+(totalVisitas?Math.round(c/totalVisitas*100):0)+'%</td></tr>').join('')}
         <tr style="background:#f8fafc;font-weight:700"><td style="padding:6px 8px;border-top:2px solid #e2e8f0">Total</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">${totalVisitas}</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">100%</td></tr>
       </table>
     </div>`;

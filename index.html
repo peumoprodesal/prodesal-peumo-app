@@ -750,37 +750,47 @@ async function deleteFromCloud(id){
 function rInf(){
   if(!cfg.nombre)return '<div class="warn">⚠️ Ve a <b>⚙️ Config</b> primero</div>';
   const sem=wk(new Date()),mi=new Date().getMonth();
-  const myVis=vis.filter(v=>v.asesor===cfg.abr||v.asesor===cfg.nombre||!v.asesor);
-  const vs_=myVis.filter(v=>v.fecha&&wk(new Date(v.fecha+'T12:00:00'))===sem);
-  const vm=myVis.filter(v=>v.fecha&&new Date(v.fecha+'T12:00:00').getMonth()===mi);
-  // Coverage metrics
-  const META_TEC=3; // 3 visitas/usuario/año por técnico
-  const META_AP=200; // 200 visitas/año para asesor profesional
-  const cobData=[];
-  // Normalize tecnico matching: "R. CONTRERAS" matches "R.CONTRERAS"
   const normT=s=>(s||'').replace(/\.\s*/g,'.').toUpperCase().trim();
+  // Coverage metrics
+  const META_TEC=3;
+  const META_AP=200;
+  const cobData=[];
   const tecnicos=EQUIPO.filter(e=>e.cargo==='Asesor Técnico');
   tecnicos.forEach(t=>{
     const tNorm=normT(t.abr);
     const farmers=U.filter(u=>normT(u.tecnico)===tNorm);
     const tVis=vis.filter(v=>normT(v.asesor)===tNorm);
-    const rutsVisitados=new Set(tVis.map(v=>v.rut).filter(Boolean));
+    const rutsVis=new Set(tVis.map(v=>v.rut).filter(Boolean));
     const metaTotal=farmers.length*META_TEC;
-    cobData.push({nombre:t.nombre,abr:t.abr,farmers:farmers.length,visitasHechas:tVis.length,rutsVisitados:rutsVisitados.size,meta:metaTotal,pct:metaTotal?Math.round(tVis.length/metaTotal*100):0,tipo:'tec'});
+    cobData.push({nombre:t.nombre,abr:t.abr,farmers:farmers.length,visitasHechas:tVis.length,rutsVisitados:rutsVis.size,meta:metaTotal,pct:metaTotal?Math.round(tVis.length/metaTotal*100):0,tipo:'tec'});
   });
-  // Asesor Profesional
   const ap=EQUIPO.find(e=>e.cargo==='Asesor Profesional');
   if(ap){
     const apVis=vis.filter(v=>normT(v.asesor)===normT(ap.abr));
     const apRuts=new Set(apVis.map(v=>v.rut).filter(Boolean));
     cobData.push({nombre:ap.nombre,abr:ap.abr,farmers:U.length,visitasHechas:apVis.length,rutsVisitados:apRuts.size,meta:META_AP,pct:META_AP?Math.round(apVis.length/META_AP*100):0,tipo:'ap'});
   }
-  const totalFarmers=U.length;
   const totalVisitas=vis.length;
   const totalRutsVisitados=new Set(vis.map(v=>v.rut).filter(Boolean)).size;
   const totalMetaTec=cobData.filter(c=>c.tipo==='tec').reduce((s,c)=>s+c.meta,0);
   const totalMeta=totalMetaTec+META_AP;
   const totalPct=totalMeta?Math.round(totalVisitas/totalMeta*100):0;
+  
+  // Summary by Rubro
+  const rubroMap={};
+  vis.forEach(v=>{const r=v.rubro||'SIN RUBRO';rubroMap[r]=(rubroMap[r]||0)+1});
+  const rubroRows=Object.entries(rubroMap).sort((a,b)=>b[1]-a[1]);
+  
+  // Summary by Sector
+  const sectorMap={};
+  vis.forEach(v=>{const s=v.sector||'SIN SECTOR';sectorMap[s]=(sectorMap[s]||0)+1});
+  const sectorRows=Object.entries(sectorMap).sort((a,b)=>b[1]-a[1]);
+  
+  // My visits for counts
+  const myVis=vis.filter(v=>normT(v.asesor)===normT(cfg.abr)||!v.asesor);
+  const vs_=vis.filter(v=>v.fecha&&wk(new Date(v.fecha+'T12:00:00'))===sem);
+  const vm=vis.filter(v=>v.fecha&&new Date(v.fecha+'T12:00:00').getMonth()===mi);
+
   return `
     <b style="font-size:15px;display:block" class="mb">📄 Generar Informes</b>
     <div class="cd" style="border-color:#93c5fd;background:#eff6ff">
@@ -794,46 +804,50 @@ function rInf(){
     </div>
     <div class="cd">
       <b style="font-size:13px">📊 Informe Semanal</b>
-      <p class="mu" style="margin:4px 0 8px">Word con detalle de visitas y observaciones</p>
-      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+      <p class="mu" style="margin:4px 0 8px">Informes de la semana seleccionada</p>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <span class="mu">Semana</span>
         <input type="number" class="ip" id="gs" value="${sem}" min="1" max="53" style="width:65px;display:inline-block">
         <span class="mu">(${vs_.length} visitas)</span>
-        <button class="bt bt-b bt-s" onclick="gI('sem')" style="margin-left:auto">⬇️ Descargar Word</button>
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
+        <button class="bt bt-g bt-s" onclick="gI('sem','mun')">📝 Municipal</button>
+        <button class="bt bt-o bt-s" onclick="gI('sem','ind')">📋 INDAP .doc</button>
+        <button class="bt bt-b bt-s" onclick="gExcel('sem')">📊 INDAP .xlsx</button>
       </div>
     </div>
     <div class="cd">
       <b style="font-size:13px">📅 Informe Mensual</b>
-      <p class="mu" style="margin:4px 0 8px">Informes Municipal e INDAP del mes</p>
+      <p class="mu" style="margin:4px 0 8px">Informes del mes seleccionado</p>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <span class="mu">Mes</span>
-        <select class="ip" id="gm" style="width:130px;display:inline-block">${MESES.map((m,i)=>`<option value="${i}" ${i===mi?'selected':''}>${m[0].toUpperCase()+m.slice(1)}</option>`).join('')}</select>
+        <select class="ip" id="gm" style="width:130px;display:inline-block">${MESES.map((m,i)=>'<option value="'+i+'" '+(i===mi?'selected':'')+'>'+m[0].toUpperCase()+m.slice(1)+'</option>').join('')}</select>
         <span class="mu">(${vm.length} visitas)</span>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
-        <button class="bt bt-g bt-s" onclick="gI('mun')">📝 Municipal (.doc)</button>
-        <button class="bt bt-o bt-s" onclick="gI('ind')">📋 INDAP (.doc)</button>
-        <button class="bt bt-b bt-s" onclick="gExcel()">📊 INDAP Excel (.xlsx)</button>
+        <button class="bt bt-g bt-s" onclick="gI('mes','mun')">📝 Municipal</button>
+        <button class="bt bt-o bt-s" onclick="gI('mes','ind')">📋 INDAP .doc</button>
+        <button class="bt bt-b bt-s" onclick="gExcel('mes')">📊 INDAP .xlsx</button>
       </div>
     </div>
     <div class="cd">
-      <b style="font-size:13px">📈 Resumen</b>
+      <b style="font-size:13px">📈 Resumen General</b>
       <div class="sg mt">
         <div class="st"><div class="n" style="color:var(--b2)">${myVis.length}</div><div class="l">Mis visitas</div></div>
-        <div class="st"><div class="n" style="color:var(--g)">${myVis.filter(v=>v.estado==='Firmado').length}</div><div class="l">Firmadas</div></div>
+        <div class="st"><div class="n" style="color:var(--g)">${vis.filter(v=>v.estado==='Firmado').length}</div><div class="l">Firmadas</div></div>
         <div class="st"><div class="n" style="color:var(--o)">${vis.length}</div><div class="l">Total equipo</div></div>
       </div>
     </div>
     <div class="cd" style="border-color:#a78bfa;background:#f5f3ff">
       <b style="font-size:13px;color:#7c3aed">🎯 Cobertura de Visitas</b>
-      <p class="mu" style="margin:4px 0 10px">Técnicos: ${META_TEC} visitas/usuario/año · Asesor Profesional: ${META_AP} visitas/año</p>
+      <p class="mu" style="margin:4px 0 10px">Técnicos: ${META_TEC} vis/usuario/año · Asesor Profesional: ${META_AP} vis/año</p>
       <div style="display:flex;flex-direction:column;gap:10px">
         ${cobData.map(t=>{
           const barColor=t.pct>=80?'#22c55e':t.pct>=40?'#f59e0b':'#ef4444';
           return '<div style="background:white;border-radius:8px;padding:10px 12px">'+
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
-            '<b style="font-size:12px">'+t.abr+'</b>'+
-            '<span style="font-size:11px;color:#6b7280">'+t.rutsVisitados+'/'+t.farmers+' usuarios · meta: '+(t.tipo==='ap'?'${META_AP} vis/año':t.meta+' vis')+'</span>'+
+            '<b style="font-size:12px">'+h(t.abr)+(t.tipo==='ap'?' (AP)':'')+'</b>'+
+            '<span style="font-size:11px;color:#6b7280">'+t.rutsVisitados+'/'+t.farmers+' usuarios</span>'+
             '</div>'+
             '<div style="background:#e5e7eb;border-radius:4px;height:18px;overflow:hidden;position:relative">'+
             '<div style="background:'+barColor+';height:100%;width:'+Math.min(t.pct,100)+'%;border-radius:4px;transition:width 0.5s"></div>'+
@@ -842,7 +856,7 @@ function rInf(){
         <div style="background:white;border-radius:8px;padding:10px 12px;border:2px solid #a78bfa">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
             <b style="font-size:12px;color:#7c3aed">📊 TOTAL EQUIPO</b>
-            <span style="font-size:11px;color:#6b7280">${totalRutsVisitados}/${totalFarmers} usuarios visitados</span>
+            <span style="font-size:11px;color:#6b7280">${totalRutsVisitados}/${U.length} usuarios visitados</span>
           </div>
           <div style="background:#e5e7eb;border-radius:4px;height:20px;overflow:hidden;position:relative">
             <div style="background:${totalPct>=80?'#22c55e':totalPct>=40?'#f59e0b':'#ef4444'};height:100%;width:${Math.min(totalPct,100)}%;border-radius:4px;transition:width 0.5s"></div>
@@ -850,35 +864,52 @@ function rInf(){
           </div>
         </div>
       </div>
+    </div>
+    <div class="cd">
+      <b style="font-size:13px">🌱 Visitas por Rubro</b>
+      <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12px">
+        <tr style="background:#f1f5f9"><th style="padding:6px 8px;text-align:left;border-bottom:2px solid #e2e8f0">Rubro</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:60px">Visitas</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:55px">%</th></tr>
+        ${rubroRows.map(([r,c])=>'<tr><td style="padding:5px 8px;border-bottom:1px solid #f1f5f9">'+h(r)+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;font-weight:600">'+c+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#6b7280">'+(totalVisitas?Math.round(c/totalVisitas*100):0)+'%</td></tr>').join('')}
+        <tr style="background:#f8fafc;font-weight:700"><td style="padding:6px 8px;border-top:2px solid #e2e8f0">Total</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">${totalVisitas}</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">100%</td></tr>
+      </table>
+    </div>
+    <div class="cd">
+      <b style="font-size:13px">📍 Visitas por Sector</b>
+      <table style="width:100%;border-collapse:collapse;margin-top:8px;font-size:12px">
+        <tr style="background:#f1f5f9"><th style="padding:6px 8px;text-align:left;border-bottom:2px solid #e2e8f0">Sector</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:60px">Visitas</th><th style="padding:6px 8px;text-align:center;border-bottom:2px solid #e2e8f0;width:55px">%</th></tr>
+        ${sectorRows.map(([s,c])=>'<tr><td style="padding:5px 8px;border-bottom:1px solid #f1f5f9">'+h(s)+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;font-weight:600">'+c+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#6b7280">'+(totalVisitas?Math.round(c/totalVisitas*100):0)+'%</td></tr>').join('')}
+        <tr style="background:#f8fafc;font-weight:700"><td style="padding:6px 8px;border-top:2px solid #e2e8f0">Total</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">${totalVisitas}</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">100%</td></tr>
+      </table>
     </div>`;
 }
 
-function getFilteredVis(tipo){
+function getFilteredVis(periodo,formato){
+  const normT=s=>(s||'').replace(/\.\s*/g,'.').toUpperCase().trim();
   const asesorSel=document.getElementById('gAsesor')?.value||cfg.abr;
   let src=vis;
-  if(asesorSel!=='__todos__') src=vis.filter(v=>(v.asesor||'')===(asesorSel)||(v.asesor||'')===''&&asesorSel===cfg.abr);
-  // Get asesor info for header
+  if(asesorSel!=='__todos__') src=vis.filter(v=>normT(v.asesor)===normT(asesorSel)||(!(v.asesor)&&normT(asesorSel)===normT(cfg.abr)));
   const eq=EQUIPO.find(e=>e.abr===asesorSel);
   const asesorNombre=asesorSel==='__todos__'?'EQUIPO COMPLETO':(eq?eq.nombre.toUpperCase():(cfg.nombre||'').toUpperCase());
   const asesorCargo=eq?eq.cargo:cfg.cargo;
   let vf,tit,fn;
-  if(tipo==='sem'){
+  if(periodo==='sem'){
     const s=+document.getElementById('gs').value;
     vf=src.filter(v=>v.fecha&&wk(new Date(v.fecha+'T12:00:00'))===s);
-    tit='INFORME SEMANA '+s+' — 2026';fn='INFORME_SEMANA_'+s+'_2026.doc';
+    const sufijo=formato==='mun'?'MUNICIPAL':'INDAP';
+    tit='INFORME SEMANA '+s+' \u2014 2026';fn='SEMANA_'+s+'_2026_'+sufijo;
   }else{
     const m=+document.getElementById('gm').value;
     vf=src.filter(v=>v.fecha&&new Date(v.fecha+'T12:00:00').getMonth()===m);
-    tit='INFORME MES DE '+MESES[m].toUpperCase()+' 2026';
-    fn=MESES[m].toUpperCase()+'_2026_'+(tipo==='mun'?'MUNICIPAL':'INDAP')+'.doc';
+    const sufijo=formato==='mun'?'MUNICIPAL':'INDAP';
+    tit='INFORME MES DE '+MESES[m].toUpperCase()+' 2026';fn=MESES[m].toUpperCase()+'_2026_'+sufijo;
   }
   return {vf,tit,fn,asesorNombre,asesorCargo,asesorSel};
 }
 
-function gI(tipo){
-  const {vf,tit,fn,asesorNombre,asesorCargo}=getFilteredVis(tipo);
+function gI(periodo,formato){
+  const {vf,tit,fn,asesorNombre,asesorCargo}=getFilteredVis(periodo,formato);
   const ab=cfg.abr||abv(cfg.nombre);
-  const vt=vf.filter(v=>v.tipo==='Visita Técnica'||!v.tipo);
+  const vt=vf.filter(v=>v.tipo==='Visita T\u00e9cnica'||!v.tipo);
   
   const rows=vt.map(v=>{
     const d=v.fecha?new Date(v.fecha+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long'}).toUpperCase():'';
@@ -892,17 +923,17 @@ function gI(tipo){
       const obs=v.obs_mejorada||v.observacion||'';
       return '<p style="margin:6px 0;font-family:Verdana;font-size:8.5pt"><b>'+h(v.agricultor||'')+' ('+d+')</b>: '+h(obs)+'</p>';
     }).join('');
-    if(obsRows) obsDetail='<p style="margin:14px 0 6px;font-family:Verdana;font-size:8.5pt"><b><u>DETALLE DE OBSERVACIONES TÉCNICAS:</u></b></p>'+obsRows;
+    if(obsRows) obsDetail='<p style="margin:14px 0 6px;font-family:Verdana;font-size:8.5pt"><b><u>DETALLE DE OBSERVACIONES T\u00c9CNICAS:</u></b></p>'+obsRows;
   }
 
   let visitSummary='';
-  if(tipo!=='sem'){
+  if(formato!=='sem'){
     visitSummary='<p style="font-family:Verdana;font-size:8.5pt;margin:8px 0">En cuanto a la estructura definida por INDAP, las visitas del '+h(asesorCargo.toLowerCase())+' del programa tienen como prop\u00f3sito la evaluaci\u00f3n, entrega de informaci\u00f3n al usuario y validaci\u00f3n de rendiciones o avances de proyectos.</p>';
   }
   
   const sc=t=>'<tr><td colspan="2" style="background:#DEEBF6;padding:6px 10px;border:1px solid #999"><b style="font-family:Verdana;font-size:8.5pt">'+t+'</b></td></tr>';
   const fo='<p style="text-align:center;color:#999;font-style:italic;margin:20px 0;font-family:Verdana;font-size:8.5pt">[Insertar fotograf\u00edas]</p>';
-  const hdr='<div style="text-align:center;font-family:Verdana;font-size:10pt;padding:4px 0;border-bottom:1px solid #ccc;margin-bottom:12px">PRODESAL INDAP — REGI\u00d3N DEL LIBERTADOR GENERAL BERNARDO O\u2019HIGGINS</div>';
+  const hdr='<div style="text-align:center;font-family:Verdana;font-size:10pt;padding:4px 0;border-bottom:1px solid #ccc;margin-bottom:12px">PRODESAL INDAP \u2014 REGI\u00d3N DEL LIBERTADOR GENERAL BERNARDO O\u2019HIGGINS</div>';
   const ftr='<div style="text-align:center;font-family:Verdana;font-size:10pt;color:#666;padding:4px 0;border-top:1px solid #ccc;margin-top:20px">PRODESAL INDAP - REGI\u00d3N DEL LIBERTADOR GENERAL BERNARDO O\u2019HIGGINS</div>';
   
   const doc='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]--><style>@page{size:letter;margin:2cm 1.8cm;mso-header-margin:1cm;mso-footer-margin:1cm}@page Section1{mso-header-margin:1cm;mso-footer-margin:1cm}div.Section1{page:Section1}body{font-family:Verdana,sans-serif;font-size:8.5pt}table.m{width:100%;border-collapse:collapse}td{vertical-align:top}p.hdr{mso-element:header}p.ftr{mso-element:footer}</style></head><body>'
@@ -935,32 +966,111 @@ function gI(tipo){
     +ftr+'</body></html>';
   
   const blob=new Blob(['\ufeff'+doc],{type:'application/msword'});
-  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=fn;a.click();URL.revokeObjectURL(url);
-  nf('\ud83d\udcc4 '+fn);
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=fn+'.doc';a.click();URL.revokeObjectURL(url);
+  nf('\ud83d\udcc4 '+fn+'.doc');
 }
 
 // ========= INFORME EXCEL INDAP =========
-function gExcel(){
-  const {vf,asesorNombre}=getFilteredVis('ind');
-  const m=+document.getElementById('gm').value;
-  const mesNom=MESES[m].toUpperCase();
-  const fn=mesNom+'_2026_INDAP.xlsx';
+function gExcel(periodo){
+  const {vf,asesorNombre}=getFilteredVis(periodo,'ind');
+  let mesNom,fn;
+  if(periodo==='sem'){
+    const s=+document.getElementById('gs').value;
+    mesNom='SEMANA_'+s;fn='SEMANA_'+s+'_2026_INDAP.xlsx';
+  }else{
+    const m=+document.getElementById('gm').value;
+    mesNom=MESES[m].toUpperCase();fn=mesNom+'_2026_INDAP.xlsx';
+  }
   
   // Group activities
   const actividades=[];
-  
-  // 1. Visitas técnicas
-  const vt=vf.filter(v=>v.tipo==='Visita Técnica'||!v.tipo);
+  const vt=vf.filter(v=>v.tipo==='Visita T\u00e9cnica'||!v.tipo);
   if(vt.length>0){
-    // Build detailed text from all visit observations
-    let txt='Durante el mes de '+MESES[m]+' se han realizado '+vt.length+' visitas técnicas en terreno a los usuarios del programa, con el objetivo de atender sus necesidades de acuerdo con el Plan de Trabajo Anual (PTA), el tipo de cultivo o sistema productivo que desarrollan.';
+    const m2=periodo==='sem'?'la semana':'el mes de '+mesNom.toLowerCase();
+    let txt='Durante '+m2+' se han realizado '+vt.length+' visitas t\u00e9cnicas en terreno a los usuarios del programa, con el objetivo de atender sus necesidades de acuerdo con el Plan de Trabajo Anual (PTA), el tipo de cultivo o sistema productivo que desarrollan.';
     const obsTexts=vt.filter(v=>v.observacion||v.obs_mejorada).map(v=>{
       const obs=v.obs_mejorada||v.observacion;
       return v.agricultor+': '+obs;
     });
     if(obsTexts.length>0) txt+='\n\nDetalle por usuario:\n'+obsTexts.join('\n');
-    actividades.push({nombre:'Visita técnica',detalle:txt});
+    actividades.push({nombre:'Visita t\u00e9cnica',detalle:txt});
   }
+  const reu_v=vf.filter(v=>v.tipo&&v.tipo.toLowerCase().includes('reunion'));
+  if(reu_v.length>0){
+    const txt=reu_v.map(v=>{
+      const d=new Date(v.fecha+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long'});
+      return (v.obs_mejorada||v.observacion||'Reuni\u00f3n realizada el '+d);
+    }).join('\n');
+    actividades.push({nombre:'REUNIONES DE TRABAJO',detalle:txt});
+  }
+  const otros=vf.filter(v=>v.tipo&&!v.tipo.includes('Visita')&&!v.tipo.toLowerCase().includes('reunion'));
+  const byTipo={};
+  otros.forEach(v=>{if(!byTipo[v.tipo])byTipo[v.tipo]=[];byTipo[v.tipo].push(v)});
+  Object.keys(byTipo).forEach(t=>{
+    const vlist=byTipo[t];
+    const txt=vlist.map(v=>v.obs_mejorada||v.observacion||'').filter(Boolean).join('\n');
+    actividades.push({nombre:t.toUpperCase(),detalle:txt||'Actividad realizada.'});
+  });
+  if(actividades.length===0) actividades.push({nombre:'Visita t\u00e9cnica',detalle:'Sin actividades registradas.'});
+  
+  let xmlRows='';
+  actividades.forEach((act,i)=>{
+    const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+    xmlRows+=`<Row ss:Height="${Math.max(150,act.detalle.length*0.6)}">
+      <Cell ss:StyleID="sNum"><Data ss:Type="Number">${i+1}</Data></Cell>
+      <Cell ss:StyleID="sAct"><Data ss:Type="String">${esc(act.nombre)}</Data></Cell>
+      <Cell ss:StyleID="sDet" ss:MergeAcross="1"><Data ss:Type="String">${esc(act.detalle)}</Data></Cell>
+    </Row>`;
+  });
+  
+  const esc=s=>(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+
+    const xml=`<?xml version="1.0" encoding="UTF-8"?>
+<?mso-application progid="Excel.Sheet"?>
+<Workbook xmlns="urn:schemas-microsoft-com:office:spreadsheet"
+ xmlns:o="urn:schemas-microsoft-com:office:office"
+ xmlns:x="urn:schemas-microsoft-com:office:excel"
+ xmlns:ss="urn:schemas-microsoft-com:office:spreadsheet">
+<Styles>
+  <Style ss:ID="Default"><Alignment ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11"/></Style>
+  <Style ss:ID="sTitle"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="14" ss:Bold="1"/><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="sLabel"><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="sValue"><Alignment ss:Horizontal="Center" ss:Vertical="Center"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/></Style>
+  <Style ss:ID="sSubtitle"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/></Style>
+  <Style ss:ID="sHeader"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Interior ss:Color="#F2F2F2" ss:Pattern="Solid"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+  <Style ss:ID="sNum"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+  <Style ss:ID="sAct"><Alignment ss:Horizontal="Center" ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Verdana" ss:Size="12" ss:Bold="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+  <Style ss:ID="sDet"><Alignment ss:Vertical="Center" ss:WrapText="1"/><Font ss:FontName="Calibri" ss:Size="11" ss:Bold="1"/><Borders><Border ss:Position="Bottom" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Left" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Right" ss:LineStyle="Continuous" ss:Weight="1"/><Border ss:Position="Top" ss:LineStyle="Continuous" ss:Weight="1"/></Borders></Style>
+</Styles>
+<Worksheet ss:Name="Hoja1">
+  <Table ss:DefaultRowHeight="15">
+    <Column ss:Index="1" ss:Width="30"/>
+    <Column ss:Index="2" ss:Width="420"/>
+    <Column ss:Index="3" ss:Width="100"/>
+    <Column ss:Index="4" ss:Width="600"/>
+    <Row ss:Height="120"><Cell ss:MergeAcross="3"><Data ss:Type="String"> </Data></Cell></Row>
+    <Row ss:Height="19"><Cell ss:MergeAcross="3" ss:StyleID="sTitle"><Data ss:Type="String">INFORME DE ACTIVIDADES MENSUAL EQUIPO TÉCNICO PRODESAL</Data></Cell></Row>
+    <Row ss:Height="6"><Cell><Data ss:Type="String"> </Data></Cell></Row>
+    <Row><Cell ss:MergeAcross="1" ss:StyleID="sLabel"><Data ss:Type="String">NOMBRE:</Data></Cell><Cell ss:MergeAcross="1" ss:StyleID="sValue"><Data ss:Type="String">${esc((cfg.nombre||'').toUpperCase())}</Data></Cell></Row>
+    <Row><Cell ss:MergeAcross="1" ss:StyleID="sLabel"><Data ss:Type="String">RUT:</Data></Cell><Cell ss:MergeAcross="1" ss:StyleID="sValue"><Data ss:Type="String">${esc(cfg.rut||'')}</Data></Cell></Row>
+    <Row><Cell ss:MergeAcross="1" ss:StyleID="sLabel"><Data ss:Type="String">MES DE RENDICIÓN:</Data></Cell><Cell ss:MergeAcross="1" ss:StyleID="sValue"><Data ss:Type="String">${mesNom}</Data></Cell></Row>
+    <Row><Cell ss:MergeAcross="1" ss:StyleID="sLabel"><Data ss:Type="String">CARGO:</Data></Cell><Cell ss:MergeAcross="1" ss:StyleID="sValue"><Data ss:Type="String">${esc((cfg.cargo||'').toUpperCase())}</Data></Cell></Row>
+    <Row ss:Height="6"><Cell><Data ss:Type="String"> </Data></Cell></Row>
+    <Row><Cell ss:MergeAcross="3" ss:StyleID="sSubtitle"><Data ss:Type="String">INFORME DEL CARGO ${esc((cfg.cargo||'').toUpperCase())} - ${mesNom} 2026</Data></Cell></Row>
+    <Row>
+      <Cell ss:StyleID="sHeader"><Data ss:Type="String">Nº</Data></Cell>
+      <Cell ss:StyleID="sHeader"><Data ss:Type="String">ACTIVIDAD PTA/PAS</Data></Cell>
+      <Cell ss:StyleID="sHeader" ss:MergeAcross="1"><Data ss:Type="String">LABORES REALIZADAS</Data></Cell>
+    </Row>
+    ${xmlRows}
+  </Table>
+</Worksheet>
+</Workbook>`;
+  
+  const blob=new Blob([xml],{type:'application/vnd.ms-excel'});
+  const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=fn;a.click();URL.revokeObjectURL(url);
+  nf('📊 '+fn);
+}
   
   // 2. Reuniones
   const reu_v=vf.filter(v=>v.tipo&&v.tipo.toLowerCase().includes('reunion'));

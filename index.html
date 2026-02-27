@@ -86,7 +86,7 @@ const OBJ=["Acompañamiento visita técnica","Presentación equipo y asesoramien
 const MESES=["enero","febrero","marzo","abril","mayo","junio","julio","agosto","septiembre","octubre","noviembre","diciembre"];
 
 // Google Sheets Sync
-const SYNC_URL='https://script.google.com/macros/s/AKfycbxHOxZtHHXvKMZ96XFSh25sEioH3saemN_NvvXFFja9v3G70GFu9_Ya6P9wXJY-A0ls/exec';
+const SYNC_URL='https://script.google.com/macros/s/AKfycbwY2JeA1eaJvHKKFA6w1t1Qd2AKiHnOlfbCc2VWHgOVluq1RpcAMNKuusLETndGAkIi8w/exec';
 let syncing=false,lastSync='';
 
 // === CARGA DINÁMICA DE NÓMINA DESDE GOOGLE SHEETS ===
@@ -335,14 +335,14 @@ function rNom(){
   // Build cards ONCE - filtering done via display:none
   const cards=U.map(u=>{
     const nm=(u.apellidos||'')+', '+(u.nombres||'');
-    const fo=u.formal==='Con inicio de actividades';
+    const fo=u.sii==='Con inicio de actividades';
     const searchStr=((u.apellidos||'')+' '+(u.nombres||'')+' '+(u.rut||'')).toLowerCase();
-    return `<div class="cd ucard" data-s="${h(searchStr)}" data-t="${u.tecnico||''}" data-f="${u.formal||''}" onclick="oF(${u.n})" style="cursor:pointer">
+    return `<div class="cd ucard" data-s="${h(searchStr)}" data-t="${u.tecnico||''}" data-f="${u.sii||''}" onclick="oF(${u.n})" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="flex:1;min-width:0">
           <b style="font-size:13px">${h(nm)}</b>
-          ${u.nIFP?`<span class="tg tg-b">${u.nIFP} IFP</span>`:''}
-          ${u.priEstado?'<span class="tg tg-p">PRI</span>':''}
+          ${u.n_ifp?`<span class="tg tg-b">${u.n_ifp} IFP</span>`:''}
+          ${(u.pri&&u.pri.ESTADO)?'<span class="tg tg-p">PRI</span>':''}
           ${u.ceaf?'<span class="tg tg-o">CEAF</span>':''}
           <div class="mu" style="margin-top:2px">${u.rut||''} · ${u.rubro||''} · ${u.tecnico||''}</div>
         </div>
@@ -371,7 +371,7 @@ function oF(n){sel=U.find(u=>u.n===n);R();window.scrollTo(0,0)}
 function rFicha(){
   const u=sel;if(!u)return'';
   const nm=(u.nombres||'')+' '+(u.apellidos||'');
-  const fo=u.formal==='Con inicio de actividades';
+  const fo=u.sii==='Con inicio de actividades';
   const uv=vis.filter(v=>v.rut===u.rut);
   const tel=u.telefono?u.telefono.replace(/\s/g,''):'';
   return `
@@ -383,12 +383,12 @@ function rFicha(){
       </div>
       <div class="g2 mt">
         <div><span class="mu" style="font-size:10px">Rubro</span><div style="font-weight:600;font-size:13px">${u.rubro||'-'}</div></div>
-        <div><span class="mu" style="font-size:10px">Sector</span><div style="font-weight:600;font-size:13px">${u.sectorEsp||u.sector||'-'}</div></div>
+        <div><span class="mu" style="font-size:10px">Sector</span><div style="font-weight:600;font-size:13px">${u.sector_esp||u.sector||'-'}</div></div>
         <div><span class="mu" style="font-size:10px">Técnico</span><div style="font-weight:600;font-size:13px">${u.tecnico||'-'}</div></div>
         <div><span class="mu" style="font-size:10px">Teléfono</span><div style="font-weight:600;font-size:13px">${u.telefono?`<a href="tel:${tel}" style="color:var(--b2)">${u.telefono}</a>`:'-'}</div></div>
       </div>
-      ${u.ifp&&u.ifp.length?`<div class="fs"><h4>📦 IFP (${u.nIFP||0} proy. — ${fm(u.totalIFP||0)})</h4>${u.ifp.map(p=>`<div class="ifp"><div><b>${p.anio}</b> — ${h(p.proyecto)}</div><div style="font-weight:600;color:var(--g);white-space:nowrap;margin-left:8px">${fm(p.monto)}</div></div>`).join('')}</div>`:'<div class="fs"><h4>📦 IFP</h4><p class="mu">Sin proyectos</p></div>'}
-      ${u.priEstado?`<div class="fs"><h4>💧 Riego PRI — ${u.priEstado}</h4>${u.pri?`<p style="font-size:12px;margin-top:4px">${h(u.pri)}</p>`:''}${u.priTen?`<p class="mu mt">${u.priTen}${u.priSup?' · '+u.priSup+' ha':''}</p>`:''}</div>`:''}
+      ${(u.ifp&&typeof u.ifp==='object'&&Object.keys(u.ifp).length)?`<div class="fs"><h4>📦 IFP (${u.n_ifp||0} proy. — ${fm(u.total_ifp||0)})</h4>${Object.keys(u.ifp).sort().map(y=>`<div class="ifp"><div><b>${y}</b> — ${h(u.ifp[y])}</div><div style="font-weight:600;color:var(--g);white-space:nowrap;margin-left:8px">${fm((u.ifp_m&&u.ifp_m[y])||0)}</div></div>`).join('')}</div>`:'<div class="fs"><h4>📦 IFP</h4><p class="mu">Sin proyectos</p></div>'}
+      ${(u.pri&&u.pri.ESTADO)?`<div class="fs"><h4>💧 Riego PRI — ${u.pri.ESTADO}</h4>${u.pri.PROYECTO?`<p style="font-size:12px;margin-top:4px">${h(u.pri.PROYECTO)}</p>`:''}${u.pri.TENENCIA?`<p class="mu mt">${u.pri.TENENCIA}${u.pri.SUPERFICIE?' · '+u.pri.SUPERFICIE+' ha':''}</p>`:''}</div>`:''}
       ${u.ceaf?'<div class="fs"><h4>🤝 CEAF</h4><span class="tg tg-o">Incluido</span></div>':''}
       <div class="fs"><h4>📋 Mis visitas (${uv.length})</h4>
         ${uv.length?uv.slice(-5).reverse().map(v=>`<div class="ifp"><div>${fd(v.fecha)} — ${h((v.objetivo||'').slice(0,40))}</div>${v.folio?`<span class="tg tg-b">F.${v.folio}</span>`:''}</div>`).join(''):'<p class="mu">Sin visitas aún</p>'}

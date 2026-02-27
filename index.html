@@ -425,11 +425,11 @@ function rVL(){
           <b style="font-size:13px">${h(v.agricultor)}</b>
           ${v.folio?`<span class="tg tg-b">F.${v.folio}</span>`:''}
           <span class="tg ${v.estado==='Firmado'?'tg-g':'tg-o'}">${v.estado||'Firmado'}</span>
-          <div class="mu" style="margin-top:2px">${fd(v.fecha)} · ${v.rubro||''} · ${v.sector||''}</div>
+          <div class="mu" style="margin-top:2px">${fd(v.fecha)} · ${v.rubro||''} · ${v.sector||''}${v.asesor?` · <b style="color:#6366f1">${h(v.asesor)}</b>`:''}</div>
           ${v.observacion?`<p style="font-size:11px;color:#475569;margin-top:3px">${h(v.observacion.slice(0,120))}</p>`:''}
         </div>
         <div style="display:flex;gap:2px;margin-left:6px;flex-shrink:0">
-          <button onclick="ev=vis.find(x=>x.id==='${v.id}');sfv=true;R();window.scrollTo(0,0)" style="background:none;border:none;cursor:pointer;font-size:15px;padding:4px">✏️</button>
+          <button onclick="ev=vis.find(x=>String(x.id)===String('${v.id}'));sfv=true;R();window.scrollTo(0,0)" style="background:none;border:none;cursor:pointer;font-size:15px;padding:4px">✏️</button>
           <button onclick="dV('${v.id}')" style="background:none;border:none;cursor:pointer;font-size:15px;padding:4px">🗑️</button>
         </div>
       </div>
@@ -684,11 +684,11 @@ function sV(){
   if(ev?.obs_original)nv.obs_original=ev.obs_original;
   if(ev?.obs_mejorada)nv.obs_mejorada=ev.obs_mejorada;
   
-  if(ev?.id)vis=vis.map(x=>x.id===nv.id?nv:x);else vis.push(nv);
+  if(ev?.id)vis=vis.map(x=>String(x.id)===String(nv.id)?nv:x);else vis.push(nv);
   SV('vis',vis);sfv=false;ev=null;R();nf('✅ Visita guardada');
   syncToCloud(nv); // Sync to Google Sheets
 }
-function dV(id){if(!confirm('¿Eliminar?'))return;vis=vis.filter(v=>v.id!==id);SV('vis',vis);R();nf('🗑️ Eliminada');deleteFromCloud(id)}
+function dV(id){if(!confirm('¿Eliminar?'))return;vis=vis.filter(v=>String(v.id)!==String(id));SV('vis',vis);R();nf('🗑️ Eliminada');deleteFromCloud(id)}
 
 // ========= GOOGLE SHEETS SYNC =========
 async function syncToCloud(visita){
@@ -753,6 +753,22 @@ function rInf(){
   const myVis=vis.filter(v=>v.asesor===cfg.abr||v.asesor===cfg.nombre||!v.asesor);
   const vs_=myVis.filter(v=>v.fecha&&wk(new Date(v.fecha+'T12:00:00'))===sem);
   const vm=myVis.filter(v=>v.fecha&&new Date(v.fecha+'T12:00:00').getMonth()===mi);
+  // Coverage metrics: 3 visits/year per farmer per technician
+  const META_VISITAS=3;
+  const cobData=[];
+  const tecnicos=EQUIPO.filter(e=>e.cargo==='Asesor Técnico');
+  tecnicos.forEach(t=>{
+    const farmers=U.filter(u=>(u.tecnico||'').toUpperCase().includes(t.abr.split('.')[0].trim().toUpperCase()));
+    const tVis=vis.filter(v=>(v.asesor||'')===t.abr||(v.asesor||'').includes(t.abr.split('.')[0]));
+    const rutsVisitados=new Set(tVis.map(v=>v.rut).filter(Boolean));
+    const metaTotal=farmers.length*META_VISITAS;
+    cobData.push({nombre:t.nombre,abr:t.abr,farmers:farmers.length,visitasHechas:tVis.length,rutsVisitados:rutsVisitados.size,meta:metaTotal,pct:metaTotal?Math.round(tVis.length/metaTotal*100):0});
+  });
+  const totalFarmers=U.length;
+  const totalVisitas=vis.length;
+  const totalRutsVisitados=new Set(vis.map(v=>v.rut).filter(Boolean)).size;
+  const totalMeta=totalFarmers*META_VISITAS;
+  const totalPct=totalMeta?Math.round(totalVisitas/totalMeta*100):0;
   return `
     <b style="font-size:15px;display:block" class="mb">📄 Generar Informes</b>
     <div class="cd" style="border-color:#93c5fd;background:#eff6ff">
@@ -794,6 +810,33 @@ function rInf(){
         <div class="st"><div class="n" style="color:var(--b2)">${myVis.length}</div><div class="l">Mis visitas</div></div>
         <div class="st"><div class="n" style="color:var(--g)">${myVis.filter(v=>v.estado==='Firmado').length}</div><div class="l">Firmadas</div></div>
         <div class="st"><div class="n" style="color:var(--o)">${vis.length}</div><div class="l">Total equipo</div></div>
+      </div>
+    </div>
+    <div class="cd" style="border-color:#a78bfa;background:#f5f3ff">
+      <b style="font-size:13px;color:#7c3aed">🎯 Cobertura de Visitas (Meta: ${META_VISITAS} visitas/usuario/año)</b>
+      <p class="mu" style="margin:4px 0 10px">Avance por técnico hacia la meta anual</p>
+      <div style="display:flex;flex-direction:column;gap:10px">
+        ${cobData.map(t=>{
+          const barColor=t.pct>=80?'#22c55e':t.pct>=40?'#f59e0b':'#ef4444';
+          return '<div style="background:white;border-radius:8px;padding:10px 12px">'+
+            '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
+            '<b style="font-size:12px">'+t.abr+'</b>'+
+            '<span style="font-size:11px;color:#6b7280">'+t.rutsVisitados+'/'+t.farmers+' usuarios visitados</span>'+
+            '</div>'+
+            '<div style="background:#e5e7eb;border-radius:4px;height:18px;overflow:hidden;position:relative">'+
+            '<div style="background:'+barColor+';height:100%;width:'+Math.min(t.pct,100)+'%;border-radius:4px;transition:width 0.5s"></div>'+
+            '<span style="position:absolute;top:1px;left:6px;font-size:10px;font-weight:600;color:#374151">'+t.visitasHechas+'/'+t.meta+' visitas ('+t.pct+'%)</span>'+
+            '</div></div>'}).join('')}
+        <div style="background:white;border-radius:8px;padding:10px 12px;border:2px solid #a78bfa">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">
+            <b style="font-size:12px;color:#7c3aed">📊 TOTAL EQUIPO</b>
+            <span style="font-size:11px;color:#6b7280">${totalRutsVisitados}/${totalFarmers} usuarios visitados</span>
+          </div>
+          <div style="background:#e5e7eb;border-radius:4px;height:20px;overflow:hidden;position:relative">
+            <div style="background:${totalPct>=80?'#22c55e':totalPct>=40?'#f59e0b':'#ef4444'};height:100%;width:${Math.min(totalPct,100)}%;border-radius:4px;transition:width 0.5s"></div>
+            <span style="position:absolute;top:2px;left:6px;font-size:10px;font-weight:700;color:#374151">${totalVisitas}/${totalMeta} visitas (${totalPct}%)</span>
+          </div>
+        </div>
       </div>
     </div>`;
 }

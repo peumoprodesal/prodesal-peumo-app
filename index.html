@@ -965,11 +965,10 @@ function gI(periodo,formato){
   
   const sc=t=>'<tr><td colspan="2" style="background:#DEEBF6;padding:6px 10px;border:1px solid #999"><b style="font-family:Verdana;font-size:8.5pt">'+t+'</b></td></tr>';
   const fo='<p style="text-align:center;color:#999;font-style:italic;margin:20px 0;font-family:Verdana;font-size:8.5pt">[Insertar fotograf\u00edas]</p>';
-  const hdr='<table style="width:100%;margin-bottom:12px"><tr><td style="width:40%"><img src="'+LOGO_INDAP+'" style="height:60px"></td><td style="width:60%;text-align:right"><img src="'+LOGO_PEUMO+'" style="height:55px"></td></tr></table>';
-  const ftr='';
   
-  const doc='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]--><style>@page{size:letter;margin:2cm 1.8cm;mso-header-margin:1cm;mso-footer-margin:1cm}@page Section1{mso-header-margin:1cm;mso-footer-margin:1cm}div.Section1{page:Section1}body{font-family:Verdana,sans-serif;font-size:8.5pt}table.m{width:100%;border-collapse:collapse}td{vertical-align:top}p.hdr{mso-element:header}p.ftr{mso-element:footer}</style></head><body>'
-    +hdr
+  const doc='<html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40"><head><meta charset="utf-8"><!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom><w:DoNotOptimizeForBrowser/></w:WordDocument></xml><![endif]--><style>@page{size:letter;margin:2.5cm 1.8cm 2cm 1.8cm;mso-header-margin:0.8cm;mso-footer-margin:0.8cm}@page Section1{mso-header-margin:0.8cm;mso-footer-margin:0.8cm}div.Section1{page:Section1}body{font-family:Verdana,sans-serif;font-size:8.5pt}table.m{width:100%;border-collapse:collapse}td{vertical-align:top}</style></head><body>'
+    +'<div style="mso-element:header" id="h1"><table style="width:100%;border-bottom:2px solid #5B9BD5;padding-bottom:6px;margin-bottom:8px"><tr><td style="width:50%;vertical-align:middle"><img src="'+LOGO_INDAP+'" style="height:48px"></td><td style="width:50%;text-align:right;vertical-align:middle"><img src="'+LOGO_PEUMO+'" style="height:40px"></td></tr></table></div>'
+    +'<div style="mso-element:footer" id="f1"><p style="text-align:center;font-family:Verdana;font-size:7.5pt;color:#666;border-top:1px solid #999;padding-top:4px;margin:0">PRODESAL INDAP \u2014 REGI\u00d3N DEL LIBERTADOR GENERAL BERNARDO O\u2019HIGGINS</p></div>'
     +'<table class="m"><tr><td colspan="2" style="background:#5B9BD5;padding:10px;text-align:center;border:1px solid #999"><b style="color:white;font-family:Verdana;font-size:10.5pt">'+tit+'</b></td></tr>'
     +'<tr><td style="padding:5px 10px;border:1px solid #999;width:50%;font-family:Verdana;font-size:8.5pt"><b>Nombre</b></td><td style="padding:5px 10px;border:1px solid #999;font-family:Verdana;font-size:8.5pt">'+h(asesorNombre)+'</td></tr>'
     +'<tr><td style="padding:5px 10px;border:1px solid #999;font-family:Verdana;font-size:8.5pt"><b>Unidad Operativa</b></td><td style="padding:5px 10px;border:1px solid #999;font-family:Verdana;font-size:8.5pt">'+h(cfg.unidad||'PRODESAL Peumo')+'</td></tr>'
@@ -995,7 +994,6 @@ function gI(periodo,formato){
     +'<tr><td colspan="2" style="padding:10px;border:1px solid #999">'+fo+'</td></tr>'
     +'</table>'
     +'<br style="page-break-before:always">'
-    +hdr
     +'<table class="m">'
     +'<tr><td colspan="2" style="height:120px;padding:20px 10px;border:1px solid #999;text-align:center;vertical-align:bottom;font-family:Verdana;font-size:8.5pt"><b>'+h(asesorNombre)+'</b><br><u><b>'+h(asesorCargo.toUpperCase())+' PROGRAMA PRODESAL</b></u></td></tr>'
     +'<tr><td colspan="2" style="height:120px;padding:20px 10px;border:1px solid #999;text-align:center;vertical-align:bottom;font-family:Verdana;font-size:8.5pt"><b>'+h((cfg.coord||'').toUpperCase())+'</b><br><u><b>COORDINADOR PROGRAMA PRODESAL</b></u></td></tr>'

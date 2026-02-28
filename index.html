@@ -387,11 +387,20 @@ function rFicha(){
         <div><span class="mu" style="font-size:10px">Técnico</span><div style="font-weight:600;font-size:13px">${u.tecnico||'-'}</div></div>
         <div><span class="mu" style="font-size:10px">Teléfono</span><div style="font-weight:600;font-size:13px">${u.telefono?`<a href="tel:${tel}" style="color:var(--b2)">${u.telefono}</a>`:'-'}</div></div>
       </div>
+      <div class="g2 mt">
+        <div><span class="mu" style="font-size:10px">📍 Coordenadas GPS</span>
+          ${u.lat&&u.lon?
+            '<div style="font-weight:600;font-size:12px">'+u.lat+', '+u.lon+'</div><div style="display:flex;gap:6px;margin-top:4px"><a href="https://www.google.com/maps?q='+u.lat+','+u.lon+'" target="_blank" class="bt bt-b bt-s" style="text-decoration:none;font-size:10px;padding:4px 8px">🗺️ Google Maps</a><a href="https://waze.com/ul?ll='+u.lat+','+u.lon+'&navigate=yes" target="_blank" class="bt bt-s" style="text-decoration:none;font-size:10px;padding:4px 8px;background:#33ccff;color:white">🚗 Waze</a></div>'
+            :(getCoord(u.rut)?'<div style="font-weight:600;font-size:12px">'+getCoord(u.rut).lat+', '+getCoord(u.rut).lon+'</div><div style="display:flex;gap:6px;margin-top:4px"><a href="https://www.google.com/maps?q='+getCoord(u.rut).lat+','+getCoord(u.rut).lon+'" target="_blank" class="bt bt-b bt-s" style="text-decoration:none;font-size:10px;padding:4px 8px">🗺️ Google Maps</a><a href="https://waze.com/ul?ll='+getCoord(u.rut).lat+','+getCoord(u.rut).lon+'&navigate=yes" target="_blank" class="bt bt-s" style="text-decoration:none;font-size:10px;padding:4px 8px;background:#33ccff;color:white">🚗 Waze</a></div>'
+            :'<div style="font-size:12px;color:#94a3b8">Sin coordenadas</div><button class="bt bt-s" onclick="getGPS(&quot;'+u.rut+'&quot;,'+u.n+')" style="font-size:10px;padding:4px 8px;margin-top:4px">📍 Registrar ubicación actual</button>')
+          }
+        </div>
+      </div>
       ${(u.ifp&&typeof u.ifp==='object'&&Object.keys(u.ifp).length)?`<div class="fs"><h4>📦 IFP (${u.n_ifp||0} proy. — ${fm(u.total_ifp||0)})</h4>${Object.keys(u.ifp).sort().map(y=>`<div class="ifp"><div><b>${y}</b> — ${h(u.ifp[y])}</div><div style="font-weight:600;color:var(--g);white-space:nowrap;margin-left:8px">${fm((u.ifp_m&&u.ifp_m[y])||0)}</div></div>`).join('')}</div>`:'<div class="fs"><h4>📦 IFP</h4><p class="mu">Sin proyectos</p></div>'}
       ${(u.pri&&u.pri.ESTADO)?`<div class="fs"><h4>💧 Riego PRI — ${u.pri.ESTADO}</h4>${u.pri.PROYECTO?`<p style="font-size:12px;margin-top:4px">${h(u.pri.PROYECTO)}</p>`:''}${u.pri.TENENCIA?`<p class="mu mt">${u.pri.TENENCIA}${u.pri.SUPERFICIE?' · '+u.pri.SUPERFICIE+' ha':''}</p>`:''}</div>`:''}
       ${u.ceaf?'<div class="fs"><h4>🤝 CEAF</h4><span class="tg tg-o">Incluido</span></div>':''}
       <div class="fs"><h4>📋 Mis visitas (${uv.length})</h4>
-        ${uv.length?uv.slice(-5).reverse().map(v=>`<div class="ifp"><div>${fd(v.fecha)} — ${h((v.objetivo||'').slice(0,40))}</div>${v.folio?`<span class="tg tg-b">F.${v.folio}</span>`:''}</div>`).join(''):'<p class="mu">Sin visitas aún</p>'}
+        ${uv.length?uv.sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||'')).slice(0,5).map(v=>`<div class="ifp" style="flex-wrap:wrap"><div style="flex:1">${fd(v.fecha)} — ${h((v.observacion||v.objetivo||'').slice(0,50))}${v.asesor?' · <b style="color:#6366f1;font-size:11px">'+h(v.asesor)+'</b>':''}</div>${v.folio?`<span class="tg tg-b">F.${v.folio}</span>`:''}${v.foto?'<img src="'+v.foto+'" style="width:50px;height:35px;object-fit:cover;border-radius:3px;margin-top:4px;cursor:pointer" onclick="window.open(this.src)">':''}</div>`).join(''):'<p class="mu">Sin visitas aún</p>'}
       </div>
       <div style="margin-top:14px;display:flex;gap:8px;flex-wrap:wrap">
         <button class="bt bt-b" onclick="ivD(${u.n})">📋 Registrar visita</button>
@@ -407,17 +416,38 @@ function ivD(n){
   rT();R();window.scrollTo(0,0);
 }
 
+// ========= ESTANDARIZAR ASESOR =========
+function stdAsesor(val){
+  if(!val)return cfg.abr||'';
+  const n=(val||'').replace(/\.\s*/g,'.').toUpperCase().trim();
+  const match=EQUIPO.find(e=>{
+    const abr=e.abr.replace(/\.\s*/g,'.').toUpperCase().trim();
+    const nom=e.nombre.toUpperCase().trim();
+    return n===abr||n===nom||n.includes(abr)||abr.includes(n);
+  });
+  return match?match.abr:val;
+}
+
 // ========= LISTA VISITAS =========
 function rVL(){
   if(!cfg.nombre)return '<div class="warn">⚠️ Ve a <b>⚙️ Config</b> primero</div>';
-  const s=[...vis].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const normT=s=>(s||'').replace(/\.\s*/g,'.').toUpperCase().trim();
+  const fAsesor=window._visFilter||'__todos__';
+  let filtered=fAsesor==='__todos__'?vis:vis.filter(v=>normT(v.asesor)===normT(fAsesor));
+  const s=[...filtered].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
   return `
     <div style="display:flex;justify-content:space-between;align-items:center" class="mb">
-      <b style="font-size:15px">📋 Visitas (${vis.length})</b>
+      <b style="font-size:15px">📋 Visitas (${filtered.length}/${vis.length})</b>
       <div style="display:flex;gap:6px">
         <button class="bt bt-s" id="syncBtn2" onclick="syncFromCloud()" style="background:#eff6ff;color:var(--b2);border:1px solid #93c5fd;font-size:11px">☁️ Sync</button>
         <button class="bt bt-b bt-s" onclick="sfv=true;ev=null;R()">➕ Nueva</button>
       </div>
+    </div>
+    <div class="mb">
+      <select class="ip" id="visFilterAsesor" onchange="window._visFilter=this.value;R()" style="width:100%;font-size:12px">
+        <option value="__todos__" ${fAsesor==='__todos__'?'selected':''}>Todos los asesores (${vis.length})</option>
+        ${EQUIPO.map(e=>{const c=vis.filter(v=>normT(v.asesor)===normT(e.abr)).length;return '<option value="'+e.abr+'" '+(fAsesor===e.abr?'selected':'')+'>'+e.nombre+' ('+c+')</option>'}).join('')}
+      </select>
     </div>
     ${!s.length?'<div class="empty"><i>📝</i>Sin visitas registradas.<br>Ve a 👥 Nómina, busca un agricultor y registra desde ahí.</div>':s.map(v=>`<div class="cd">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
@@ -427,6 +457,7 @@ function rVL(){
           <span class="tg ${v.estado==='Firmado'?'tg-g':'tg-o'}">${v.estado||'Firmado'}</span>
           <div class="mu" style="margin-top:2px">${fd(v.fecha)} · ${v.rubro||''} · ${v.sector||''}${v.asesor?` · <b style="color:#6366f1">${h(v.asesor)}</b>`:''}</div>
           ${v.observacion?`<p style="font-size:11px;color:#475569;margin-top:3px">${h(v.observacion.slice(0,120))}</p>`:''}
+          ${v.foto?'<div style="margin-top:4px"><img src="'+v.foto+'" style="width:60px;height:40px;object-fit:cover;border-radius:4px;border:1px solid #e2e8f0;cursor:pointer" onclick="window.open(this.src)"></div>':''}
         </div>
         <div style="display:flex;gap:2px;margin-left:6px;flex-shrink:0">
           <button onclick="ev=vis.find(x=>String(x.id)===String('${v.id}'));sfv=true;R();window.scrollTo(0,0)" style="background:none;border:none;cursor:pointer;font-size:15px;padding:4px">✏️</button>
@@ -527,14 +558,14 @@ function onFoto(input){
     const img=new Image();
     img.onload=()=>{
       const canvas=document.createElement('canvas');
-      const MAX=1600;
+      const MAX=1000;
       let w=img.width,ht=img.height;
       if(w>MAX||ht>MAX){const r=Math.min(MAX/w,MAX/ht);w*=r;ht*=r}
       canvas.width=w;canvas.height=ht;
       const ctx=canvas.getContext('2d');
       ctx.fillStyle='#fff';ctx.fillRect(0,0,w,ht);
       ctx.drawImage(img,0,0,w,ht);
-      const jpegB64=canvas.toDataURL('image/jpeg',0.85);
+      const jpegB64=canvas.toDataURL('image/jpeg',0.5);
       p.innerHTML=`<img src="${jpegB64}" class="cam-p">`;
       p.dataset.src=jpegB64;
       ocrFolio(jpegB64);
@@ -674,7 +705,7 @@ function sV(){
     objetivo:document.getElementById('vo')?.value||'',
     observacion:document.getElementById('vx')?.value||'',
     estado:document.getElementById('ve')?.value||'Firmado',
-    asesor:cfg.abr||cfg.nombre
+    asesor:stdAsesor(cfg.abr||cfg.nombre)
   };
   // Photo
   const ip=document.getElementById('imgP');
@@ -717,7 +748,7 @@ async function syncFromCloud(){
       }
       // Merge all
       const merged=[...d.visitas,...localOnly];
-      vis=merged;
+      vis=merged.map(v=>({...v,asesor:stdAsesor(v.asesor)}));
       SV('vis',vis);
       lastSync=new Date().toLocaleString('es-CL');
       SV('lastSync',lastSync);
@@ -816,7 +847,7 @@ function rInf(){
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="bt bt-g bt-s" onclick="gI('sem','mun')">📝 Municipal</button>
         <button class="bt bt-o bt-s" onclick="gI('sem','ind')">📋 INDAP .doc</button>
-        <button class="bt bt-b bt-s" onclick="gExcel('sem')">📊 INDAP .xlsx</button>
+        <button class="bt bt-b bt-s" onclick="gExcel('sem')">📊 INDAP .xls</button>
       </div>
     </div>
     <div class="cd">
@@ -830,7 +861,7 @@ function rInf(){
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="bt bt-g bt-s" onclick="gI('mes','mun')">📝 Municipal</button>
         <button class="bt bt-o bt-s" onclick="gI('mes','ind')">📋 INDAP .doc</button>
-        <button class="bt bt-b bt-s" onclick="gExcel('mes')">📊 INDAP .xlsx</button>
+        <button class="bt bt-b bt-s" onclick="gExcel('mes')">📊 INDAP .xls</button>
       </div>
     </div>
     <div class="cd">
@@ -887,11 +918,10 @@ function rInf(){
 }
 
 function getFilteredVis(periodo,formato){
-  const normT=s=>(s||'').replace(/\.\s*/g,'.').toUpperCase().trim();
   const asesorSel=document.getElementById('gAsesor')?.value||cfg.abr;
-  let src=vis;
-  if(asesorSel!=='__todos__') src=vis.filter(v=>normT(v.asesor)===normT(asesorSel)||(!(v.asesor)&&normT(asesorSel)===normT(cfg.abr)));
   const eq=EQUIPO.find(e=>e.abr===asesorSel);
+  let src=vis;
+  if(asesorSel!=='__todos__') src=vis.filter(v=>(v.asesor||'')=== asesorSel||(!v.asesor&&asesorSel===cfg.abr));
   const asesorNombre=asesorSel==='__todos__'?'EQUIPO COMPLETO':(eq?eq.nombre.toUpperCase():(cfg.nombre||'').toUpperCase());
   const asesorCargo=eq?eq.cargo:cfg.cargo;
   let vf,tit,fn;
@@ -976,10 +1006,10 @@ function gExcel(periodo){
   let mesNom,fn,periodoTxt;
   if(periodo==='sem'){
     const s=+document.getElementById('gs').value;
-    mesNom='SEMANA_'+s;fn='SEMANA_'+s+'_2026_INDAP.xlsx';periodoTxt='la semana '+s;
+    mesNom='SEMANA_'+s;fn='SEMANA_'+s+'_2026_INDAP.xls';periodoTxt='la semana '+s;
   }else{
     const m=+document.getElementById('gm').value;
-    mesNom=MESES[m].toUpperCase();fn=mesNom+'_2026_INDAP.xlsx';periodoTxt='el mes de '+MESES[m];
+    mesNom=MESES[m].toUpperCase();fn=mesNom+'_2026_INDAP.xls';periodoTxt='el mes de '+MESES[m];
   }
   
   const actividades=[];
@@ -1065,9 +1095,30 @@ function gExcel(periodo){
 </Worksheet>
 </Workbook>`;
   
-  const blob=new Blob([xml],{type:'application/vnd.ms-excel'});
+  const blob=new Blob(['\ufeff'+xml],{type:'application/vnd.ms-excel'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=fn;a.click();URL.revokeObjectURL(url);
   nf('📊 '+fn);
+}
+
+// ========= COORDENADAS GPS =========
+let coords=LD('coords')||{};
+function getCoord(rut){return coords[rut]||null}
+function saveCoord(rut,lat,lon){
+  coords[rut]={lat:Math.round(lat*1000000)/1000000,lon:Math.round(lon*1000000)/1000000,fecha:td()};
+  SV('coords',coords);
+}
+function getGPS(rut,n){
+  if(!navigator.geolocation){nf('⚠️ GPS no disponible');return}
+  nf('📍 Obteniendo ubicación...');
+  navigator.geolocation.getCurrentPosition(
+    pos=>{
+      saveCoord(rut,pos.coords.latitude,pos.coords.longitude);
+      nf('✅ Coordenadas guardadas');
+      R();
+    },
+    err=>{nf('⚠️ Error GPS: '+err.message)},
+    {enableHighAccuracy:true,timeout:15000}
+  );
 }
 
 // Init

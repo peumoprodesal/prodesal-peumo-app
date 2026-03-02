@@ -346,7 +346,7 @@ function rNom(){
           ${u.n_ifp?`<span class="tg tg-b">${u.n_ifp} IFP</span>`:''}
           ${(u.pri&&u.pri.ESTADO)?'<span class="tg tg-p">PRI</span>':''}
           ${u.ceaf?'<span class="tg tg-o">CEAF</span>':''}
-          <div class="mu" style="margin-top:2px">${u.rut||''} · ${u.rubro||''} · ${u.tecnico||''}</div>
+          <div class="mu" style="margin-top:2px">${u.rut||''} · ${u.rubro||''} · ${u.tecnico||''}${u.ibv?` · <b style="color:#0d9488">IBV ${fm(u.ibv)}</b>`:''}</div>
         </div>
         <span class="tg ${fo?'tg-g':'tg-y'}" style="margin-left:6px">${fo?'✅':'⏳'}</span>
       </div>
@@ -388,6 +388,10 @@ function rFicha(){
         <div><span class="mu" style="font-size:10px">Sector</span><div style="font-weight:600;font-size:13px">${u.sector_esp||u.sector||'-'}</div></div>
         <div><span class="mu" style="font-size:10px">Técnico</span><div style="font-weight:600;font-size:13px">${u.tecnico||'-'}</div></div>
         <div><span class="mu" style="font-size:10px">Teléfono</span><div style="font-weight:600;font-size:13px">${u.telefono?`<a href="tel:${tel}" style="color:var(--b2)">${u.telefono}</a>`:'-'}</div></div>
+      </div>
+      <div class="g2 mt">
+        <div><span class="mu" style="font-size:10px">💰 IBV Mensual</span><div style="font-weight:700;font-size:14px;color:${u.ibv?'#0d9488':'#94a3b8'}">${u.ibv?fm(u.ibv):'Sin dato'}</div></div>
+        <div><span class="mu" style="font-size:10px">📊 SII</span><div style="font-weight:600;font-size:12px">${u.sii||'Sin dato'}</div></div>
       </div>
       <div class="g2 mt">
         <div><span class="mu" style="font-size:10px">📍 Coordenadas GPS</span>

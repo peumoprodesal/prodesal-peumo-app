@@ -440,7 +440,7 @@ function rVL(){
   const normT=s=>(s||'').replace(/\.\s*/g,'.').toUpperCase().trim();
   const fAsesor=window._visFilter||'__todos__';
   let filtered=fAsesor==='__todos__'?vis:vis.filter(v=>normT(v.asesor)===normT(fAsesor));
-  const s=[...filtered].sort((a,b)=>(b.fecha||'').localeCompare(a.fecha||''));
+  const s=[...filtered].sort((a,b)=>{const dc=(b.fecha||'').localeCompare(a.fecha||'');if(dc!==0)return dc;return(a.agricultor||'').localeCompare(b.agricultor||'')});
   return `
     <div style="display:flex;justify-content:space-between;align-items:center" class="mb">
       <b style="font-size:15px">📋 Visitas (${filtered.length}/${vis.length})</b>
@@ -617,7 +617,7 @@ async function ocrFolio(imgBase64){
           role:'user',
           content:[
             {type:'image',source:{type:'base64',media_type:mediaType,data:b64Data}},
-            {type:'text',text:'Eres un asistente del programa PRODESAL Peumo (INDAP Chile). Analiza esta foto de un folio de visita t\u00e9cnica y extrae los datos.\n\nIMPORTANTE: Responde SOLO con un JSON v\u00e1lido, sin texto adicional ni backticks. El formato exacto es:\n{\"folio\":\"n\u00famero del folio\",\"fecha\":\"YYYY-MM-DD\",\"agricultor\":\"NOMBRES APELLIDOS\",\"rut\":\"XX.XXX.XXX-X\",\"observacion_original\":\"lo que dice el folio tal cual\",\"observacion_mejorada\":\"reescribe la observaci\u00f3n con redacci\u00f3n t\u00e9cnica profesional para un informe INDAP, manteniendo el sentido pero mejorando gram\u00e1tica, vocabulario t\u00e9cnico agropecuario y estructura. Debe sonar profesional y claro para el informe.\",\"objetivo\":\"el objetivo principal de la visita\"}\n\nSi no puedes leer alg\u00fan campo, d\u00e9jalo como cadena vac\u00eda \"\".\nLa observaci\u00f3n mejorada debe ser redactada en tercera persona, con lenguaje t\u00e9cnico agropecuario, lista para copiar al informe INDAP.'}
+            {type:'text',text:'Eres un asistente del programa PRODESAL Peumo (INDAP Chile). Analiza esta foto de un folio de visita t\u00e9cnica y extrae SOLO la observaci\u00f3n/recomendaci\u00f3n escrita.\n\nIMPORTANTE: Responde SOLO con un JSON v\u00e1lido, sin texto adicional ni backticks. El formato exacto es:\n{\"observacion_original\":\"lo que dice el folio tal cual, transcripci\u00f3n fiel de lo escrito\",\"observacion_mejorada\":\"reescribe la observaci\u00f3n con redacci\u00f3n t\u00e9cnica profesional para un informe INDAP, manteniendo el sentido pero mejorando gram\u00e1tica, vocabulario t\u00e9cnico agropecuario y estructura. Debe sonar profesional y claro para el informe.\"}\n\nSi no puedes leer la observaci\u00f3n, d\u00e9jala como cadena vac\u00eda \"\".\nLa observaci\u00f3n mejorada debe ser redactada en tercera persona, con lenguaje t\u00e9cnico agropecuario, lista para copiar al informe INDAP.\nNO extraigas fecha, nombre, RUT ni folio \u2014 solo la observaci\u00f3n.'}
           ]
         }]
       })
@@ -670,25 +670,8 @@ async function ocrFolio(imgBase64){
 }
 
 function fillFromOCR(parsed){
-  if(parsed.folio){const el=document.getElementById('vf');if(el&&!el.value)el.value=parsed.folio}
-  if(parsed.fecha){const el=document.getElementById('vd');if(el)el.value=parsed.fecha}
-  // Solo llenar nombre/RUT/rubro/sector si están vacíos (no precargados desde ficha)
-  const va=document.getElementById('va');
-  const vr=document.getElementById('vr');
-  const vb=document.getElementById('vb');
-  const vs=document.getElementById('vs');
-  if(parsed.agricultor&&va&&!va.value.trim()){
-    va.value=parsed.agricultor;
-    const q=parsed.agricultor.toLowerCase();
-    const found=U.find(u=>((u.nombres||'')+' '+(u.apellidos||'')).toLowerCase().includes(q)||((u.apellidos||'')+' '+(u.nombres||'')).toLowerCase().includes(q));
-    if(found){
-      if(vr&&!vr.value)vr.value=found.rut||'';
-      if(vb)vb.value=found.rubro||'PALTOS';
-      if(vs)vs.value=found.sector||'PEUMO';
-    }else if(parsed.rut&&vr&&!vr.value){
-      vr.value=parsed.rut;
-    }
-  }
+  // OCR solo interpreta la observación del folio.
+  // NO modifica fecha, nombre, RUT, rubro ni sector — esos los indica el usuario.
   const obs=parsed.observacion_mejorada||parsed.observacion_original||'';
   if(obs){const el=document.getElementById('vx');if(el)el.value=obs}
   if(!ev)ev={};
@@ -711,7 +694,7 @@ function sV(){
     objetivo:document.getElementById('vo')?.value||'',
     observacion:document.getElementById('vx')?.value||'',
     estado:document.getElementById('ve')?.value||'Firmado',
-    asesor:stdAsesor(cfg.abr||cfg.nombre)
+    asesor:ev?.id?stdAsesor(ev.asesor):stdAsesor(cfg.abr||cfg.nombre)
   };
   // Photo
   const ip=document.getElementById('imgP');
@@ -752,9 +735,11 @@ async function syncFromCloud(){
       for(const v of localOnly){
         try{await fetch(SYNC_URL+'?action=write',{method:'POST',body:JSON.stringify(v),headers:{'Content-Type':'text/plain'}})}catch{}
       }
-      // Merge all
+      // Merge all — preservar foto local (la nube no almacena fotos)
+      const localFotoMap={};
+      vis.forEach(v=>{if(v.foto)localFotoMap[v.id]=v.foto});
       const merged=[...d.visitas,...localOnly];
-      vis=merged.map(v=>({...v,asesor:stdAsesor(v.asesor)}));
+      vis=merged.map(v=>({...v,asesor:stdAsesor(v.asesor),foto:v.foto||localFotoMap[v.id]||''}));
       SV('vis',vis);
       lastSync=new Date().toLocaleString('es-CL');
       SV('lastSync',lastSync);

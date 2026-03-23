@@ -777,6 +777,7 @@ function rInf(){
   // Coverage metrics
   const META_TEC=400;
   const META_AP=200;
+  const META_COORD=0; // Coordinador sin meta anual, pero visible
   const cobData=[];
   const tecnicos=EQUIPO.filter(e=>e.cargo==='Asesor Técnico');
   tecnicos.forEach(t=>{
@@ -792,6 +793,12 @@ function rInf(){
     const apVis=vis.filter(v=>normT(v.asesor)===normT(ap.abr));
     const apRuts=new Set(apVis.map(v=>v.rut).filter(Boolean));
     cobData.push({nombre:ap.nombre,abr:ap.abr,farmers:U.length,visitasHechas:apVis.length,rutsVisitados:apRuts.size,meta:META_AP,pct:META_AP?Math.round(apVis.length/META_AP*100):0,tipo:'ap'});
+  }
+  const coord=EQUIPO.find(e=>e.cargo==='Coordinador');
+  if(coord){
+    const cVis=vis.filter(v=>normT(v.asesor)===normT(coord.abr));
+    const cRuts=new Set(cVis.map(v=>v.rut).filter(Boolean));
+    cobData.push({nombre:coord.nombre,abr:coord.abr,farmers:U.length,visitasHechas:cVis.length,rutsVisitados:cRuts.size,meta:META_COORD,pct:0,tipo:'coord'});
   }
   const totalVisitas=vis.length;
   const totalRutsVisitados=new Set(vis.map(v=>v.rut).filter(Boolean)).size;
@@ -868,15 +875,19 @@ function rInf(){
       <p class="mu" style="margin:4px 0 10px">Técnicos: ${META_TEC} vis/año · Asesor Profesional: ${META_AP} vis/año</p>
       <div style="display:flex;flex-direction:column;gap:10px">
         ${cobData.map(t=>{
-          const barColor=t.pct>=80?'#22c55e':t.pct>=40?'#f59e0b':'#ef4444';
+          const isCoord=t.tipo==='coord';
+          const barColor=isCoord?'#6366f1':t.pct>=80?'#22c55e':t.pct>=40?'#f59e0b':'#ef4444';
+          const label=t.tipo==='ap'?' (AP)':isCoord?' (Coord.)':'';
+          const barWidth=isCoord?(t.visitasHechas>0?Math.max(t.visitasHechas*2,10):0):Math.min(t.pct,100);
+          const barText=isCoord?t.visitasHechas+' visitas':t.visitasHechas+'/'+t.meta+' visitas ('+t.pct+'%)';
           return '<div style="background:white;border-radius:8px;padding:10px 12px">'+
             '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">'+
-            '<b style="font-size:12px">'+h(t.abr)+(t.tipo==='ap'?' (AP)':'')+'</b>'+
+            '<b style="font-size:12px">'+h(t.abr)+label+'</b>'+
             '<span style="font-size:11px;color:#6b7280">'+t.rutsVisitados+'/'+t.farmers+' usuarios</span>'+
             '</div>'+
             '<div style="background:#e5e7eb;border-radius:4px;height:18px;overflow:hidden;position:relative">'+
-            '<div style="background:'+barColor+';height:100%;width:'+Math.min(t.pct,100)+'%;border-radius:4px;transition:width 0.5s"></div>'+
-            '<span style="position:absolute;top:1px;left:6px;font-size:10px;font-weight:600;color:#374151">'+t.visitasHechas+'/'+t.meta+' visitas ('+t.pct+'%)</span>'+
+            '<div style="background:'+barColor+';height:100%;width:'+barWidth+'%;border-radius:4px;transition:width 0.5s"></div>'+
+            '<span style="position:absolute;top:1px;left:6px;font-size:10px;font-weight:600;color:#374151">'+barText+'</span>'+
             '</div></div>'}).join('')}
         <div style="background:white;border-radius:8px;padding:10px 12px;border:2px solid #a78bfa">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px">

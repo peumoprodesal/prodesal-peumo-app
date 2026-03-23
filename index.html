@@ -905,7 +905,152 @@ function rInf(){
         ${sectorRows.map(([s,c])=>'<tr style="'+(c===0?'background:#fef2f2':'')+'"><td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;'+(c===0?'color:#dc2626;font-weight:600':'')+'">'+h(s)+(c===0?' ⚠️':'')+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;font-weight:600;'+(c===0?'color:#dc2626':'')+'">'+c+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#6b7280">'+(totalVisitas?Math.round(c/totalVisitas*100):0)+'%</td></tr>').join('')}
         <tr style="background:#f8fafc;font-weight:700"><td style="padding:6px 8px;border-top:2px solid #e2e8f0">Total</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">${totalVisitas}</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">100%</td></tr>
       </table>
+    </div>
+    <div class="cd" style="border-color:#10b981;background:#ecfdf5">
+      <b style="font-size:13px;color:#059669">📋 Cuadro de Cobertura por Agricultor</b>
+      <p class="mu" style="margin:4px 0 8px">Matriz trimestral de visitas por usuario del técnico seleccionado</p>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
+        <span class="mu">Técnico</span>
+        <select class="ip" id="cobTec" style="width:auto;display:inline-block">
+          ${EQUIPO.filter(e=>e.cargo==='Asesor Técnico').map(e=>'<option value="'+e.abr+'">'+e.nombre+'</option>').join('')}
+          <option value="__ap__">${(EQUIPO.find(e=>e.cargo==='Asesor Profesional')||{}).nombre||'Asesor Profesional'}</option>
+          ${EQUIPO.filter(e=>e.cargo==='Coordinador').map(e=>'<option value="__coord__">'+e.nombre+' (Coordinador)</option>').join('')}
+          <option value="__todos__">Todos los asesores</option>
+        </select>
+      </div>
+      <button class="bt bt-g bt-s" onclick="renderCobMatrix()">📊 Generar cuadro</button>
+      <div id="cobMatrixContainer" style="margin-top:10px"></div>
     </div>`;
+}
+
+function renderCobMatrix(){
+  const normT=s=>(s||'').replace(/\.\s*/g,'.').toUpperCase().trim();
+  const sel=document.getElementById('cobTec')?.value||'';
+  const container=document.getElementById('cobMatrixContainer');
+  if(!container)return;
+
+  // Determinar agricultores según filtro
+  let farmers=[];
+  if(sel==='__todos__'){
+    farmers=[...U].sort((a,b)=>(a.apellidos||'').localeCompare(b.apellidos||''));
+  }else if(sel==='__ap__'||sel==='__coord__'){
+    // AP y Coordinador pueden visitar a cualquier agricultor
+    farmers=[...U].sort((a,b)=>(a.apellidos||'').localeCompare(b.apellidos||''));
+  }else{
+    farmers=U.filter(u=>normT(u.tecnico)===normT(sel)).sort((a,b)=>(a.apellidos||'').localeCompare(b.apellidos||''));
+  }
+
+  // Filtrar visitas por asesor si corresponde
+  let visF=vis;
+  if(sel==='__ap__'){
+    const ap=EQUIPO.find(e=>e.cargo==='Asesor Profesional');
+    if(ap)visF=vis.filter(v=>normT(v.asesor)===normT(ap.abr));
+  }else if(sel==='__coord__'){
+    const coord=EQUIPO.find(e=>e.cargo==='Coordinador');
+    if(coord)visF=vis.filter(v=>normT(v.asesor)===normT(coord.abr));
+  }else if(sel!=='__todos__'){
+    visF=vis.filter(v=>normT(v.asesor)===normT(sel));
+  }
+
+  // Crear mapa: rut → {0:count, 1:count, ..., 11:count}
+  const visitMap={};
+  visF.forEach(v=>{
+    if(!v.rut||!v.fecha)return;
+    const rut=v.rut.trim();
+    const mes=new Date(v.fecha+'T12:00:00').getMonth();
+    if(!visitMap[rut])visitMap[rut]={};
+    visitMap[rut][mes]=(visitMap[rut][mes]||0)+1;
+  });
+
+  const mNom=['E','F','M','A','M','J','J','A','S','O','N','D'];
+  const trimestres=[
+    {label:'T1',meses:[0,1,2]},
+    {label:'T2',meses:[3,4,5]},
+    {label:'T3',meses:[6,7,8]},
+    {label:'T4',meses:[9,10,11]}
+  ];
+
+  // Stats
+  let totalConVisita=0;
+  let totalSinVisita=0;
+  farmers.forEach(u=>{
+    const rm=visitMap[(u.rut||'').trim()];
+    if(rm&&Object.values(rm).reduce((a,b)=>a+b,0)>0)totalConVisita++;
+    else totalSinVisita++;
+  });
+
+  // Generar tabla
+  let html='<div style="font-size:12px;margin-bottom:8px;display:flex;gap:12px;flex-wrap:wrap">'
+    +'<span><b style="color:#059669">✅ '+totalConVisita+'</b> con visita</span>'
+    +'<span><b style="color:#dc2626">❌ '+totalSinVisita+'</b> sin visita</span>'
+    +'<span>Total: <b>'+farmers.length+'</b></span>'
+    +'</div>';
+
+  html+='<div style="overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid #d1d5db;border-radius:8px">'
+    +'<table style="width:100%;border-collapse:collapse;font-size:10px;min-width:600px">';
+
+  // Header
+  html+='<thead><tr style="background:#f0fdf4">'
+    +'<th style="padding:4px 6px;border:1px solid #d1d5db;text-align:center;min-width:28px;background:#f0fdf4">Nº</th>'
+    +'<th style="padding:4px 6px;border:1px solid #d1d5db;text-align:left;position:sticky;left:0;background:#f0fdf4;min-width:160px;z-index:2">Agricultor</th>';
+  trimestres.forEach(t=>{
+    t.meses.forEach(m=>{
+      html+='<th style="padding:3px 2px;border:1px solid #d1d5db;text-align:center;min-width:28px;font-weight:600;color:#374151">'+mNom[m]+'</th>';
+    });
+    html+='<th style="padding:3px 4px;border:1px solid #d1d5db;text-align:center;background:#e0f2fe;font-weight:700;color:#0369a1;min-width:28px">'+t.label+'</th>';
+  });
+  html+='<th style="padding:3px 4px;border:1px solid #d1d5db;text-align:center;background:#fef3c7;font-weight:700;color:#92400e;min-width:32px">Total</th>';
+  html+='</tr></thead><tbody>';
+
+  // Filas
+  farmers.forEach((u,idx)=>{
+    const rut=(u.rut||'').trim();
+    const rm=visitMap[rut]||{};
+    const totalU=Object.values(rm).reduce((a,b)=>a+b,0);
+    const hasVisit=totalU>0;
+    const rowBg=idx%2===0?'#fff':'#f9fafb';
+    const nombre=((u.apellidos||'')+', '+(u.nombres||'')).substring(0,30);
+
+    html+='<tr style="background:'+(hasVisit?rowBg:'#fef2f2')+'">';
+    html+='<td style="padding:3px 6px;border:1px solid #e5e7eb;font-size:9px;white-space:nowrap;color:#6b7280">'+(idx+1)+'</td>';
+    html+='<td style="padding:3px 6px;border:1px solid #e5e7eb;font-weight:500;white-space:nowrap;'+(hasVisit?'':'color:#dc2626')+'">'+h(nombre)+'</td>';
+
+    trimestres.forEach(t=>{
+      let trimTotal=0;
+      t.meses.forEach(m=>{
+        const c=rm[m]||0;
+        trimTotal+=c;
+        const cellBg=c>0?'#dcfce7':'';
+        const cellColor=c>0?'#166534':'#d1d5db';
+        html+='<td style="padding:2px;border:1px solid #e5e7eb;text-align:center;background:'+cellBg+';color:'+cellColor+';font-weight:'+(c>0?'700':'400')+'">'+(c||'·')+'</td>';
+      });
+      const tBg=trimTotal>0?'#bae6fd':'#f1f5f9';
+      html+='<td style="padding:2px;border:1px solid #e5e7eb;text-align:center;background:'+tBg+';font-weight:700;color:'+(trimTotal>0?'#0369a1':'#94a3b8')+'">'+trimTotal+'</td>';
+    });
+
+    html+='<td style="padding:2px;border:1px solid #e5e7eb;text-align:center;background:'+(totalU>0?'#fef9c3':'#fee2e2')+';font-weight:700;color:'+(totalU>0?'#92400e':'#dc2626')+'">'+totalU+'</td>';
+    html+='</tr>';
+  });
+
+  // Fila totales por mes
+  html+='<tr style="background:#f0fdf4;font-weight:700">';
+  html+='<td colspan="2" style="padding:4px 6px;border:1px solid #d1d5db">TOTAL VISITAS</td>';
+  let grandTotal=0;
+  trimestres.forEach(t=>{
+    let trimTotal=0;
+    t.meses.forEach(m=>{
+      let mesTotal=0;
+      Object.values(visitMap).forEach(rm=>{mesTotal+=(rm[m]||0)});
+      trimTotal+=mesTotal;
+      html+='<td style="padding:2px;border:1px solid #d1d5db;text-align:center;background:#dcfce7;color:#166534">'+mesTotal+'</td>';
+    });
+    grandTotal+=trimTotal;
+    html+='<td style="padding:2px;border:1px solid #d1d5db;text-align:center;background:#bae6fd;color:#0369a1">'+trimTotal+'</td>';
+  });
+  html+='<td style="padding:2px;border:1px solid #d1d5db;text-align:center;background:#fef9c3;color:#92400e">'+grandTotal+'</td>';
+  html+='</tr></tbody></table></div>';
+
+  container.innerHTML=html;
 }
 
 function getFilteredVis(periodo,formato){
@@ -942,9 +1087,9 @@ function gI(periodo,formato){
   
   let obsDetail='';
   if(vt.length>0){
-    const obsRows=vt.filter(v=>v.observacion||v.obs_mejorada).map(v=>{
+    const obsRows=vt.filter(v=>v.observacion).map(v=>{
       const d=v.fecha?new Date(v.fecha+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long'}):'';
-      const obs=v.obs_mejorada||v.observacion||'';
+      const obs=v.observacion||'';
       return '<p style="margin:6px 0;font-family:Verdana;font-size:8.5pt"><b>'+h(v.agricultor||'')+' ('+d+')</b>: '+h(obs)+'</p>';
     }).join('');
     if(obsRows) obsDetail='<p style="margin:14px 0 6px;font-family:Verdana;font-size:8.5pt"><b><u>DETALLE DE OBSERVACIONES T\u00c9CNICAS:</u></b></p>'+obsRows;
@@ -1011,8 +1156,8 @@ function gExcel(periodo){
   const vt=vf.filter(v=>v.tipo==='Visita T\u00e9cnica'||!v.tipo);
   if(vt.length>0){
     let txt='Durante '+periodoTxt+' se han realizado '+vt.length+' visitas t\u00e9cnicas en terreno a los usuarios del programa, con el objetivo de atender sus necesidades de acuerdo con el Plan de Trabajo Anual (PTA), el tipo de cultivo o sistema productivo que desarrollan.';
-    const obsTexts=vt.filter(v=>v.observacion||v.obs_mejorada).map(v=>{
-      const obs=v.obs_mejorada||v.observacion;
+    const obsTexts=vt.filter(v=>v.observacion).map(v=>{
+      const obs=v.observacion;
       return v.agricultor+': '+obs;
     });
     if(obsTexts.length>0) txt+='\n\nDetalle por usuario:\n'+obsTexts.join('\n');
@@ -1022,7 +1167,7 @@ function gExcel(periodo){
   if(reu_v.length>0){
     const txt=reu_v.map(v=>{
       const d=new Date(v.fecha+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long'});
-      return (v.obs_mejorada||v.observacion||'Reuni\u00f3n realizada el '+d);
+      return (v.observacion||'Reuni\u00f3n realizada el '+d);
     }).join('\n');
     actividades.push({nombre:'REUNIONES DE TRABAJO',detalle:txt});
   }
@@ -1031,7 +1176,7 @@ function gExcel(periodo){
   otros.forEach(v=>{if(!byTipo[v.tipo])byTipo[v.tipo]=[];byTipo[v.tipo].push(v)});
   Object.keys(byTipo).forEach(t=>{
     const vlist=byTipo[t];
-    const txt=vlist.map(v=>v.obs_mejorada||v.observacion||'').filter(Boolean).join('\n');
+    const txt=vlist.map(v=>v.observacion||'').filter(Boolean).join('\n');
     actividades.push({nombre:t.toUpperCase(),detalle:txt||'Actividad realizada.'});
   });
   if(actividades.length===0) actividades.push({nombre:'Visita t\u00e9cnica',detalle:'Sin actividades registradas.'});

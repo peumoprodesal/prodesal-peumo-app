@@ -6,7 +6,7 @@
 <title>Reporte Mercado Campesino · Peumo</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
     --olive-deep: #4A5D23; --olive: #6B7F3A; --olive-light: #8FA653; --olive-soft: #E8EDDB;
@@ -21,8 +21,8 @@
   .institutional { background: var(--white); border-bottom: 1px solid var(--line); padding: 18px 0; }
   .institutional .row { display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
   .crest { display: flex; align-items: center; gap: 14px; }
-  .crest-circle { width: 44px; height: 44px; border-radius: 50%; background: var(--olive-deep); color: var(--cream); display: flex; align-items: center; justify-content: center; font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; }
-  .crest-text { font-family: 'Fraunces', serif; font-size: 14px; line-height: 1.3; }
+  .crest-circle { width: 44px; height: 44px; border-radius: 50%; background: var(--olive-deep); color: var(--cream); display: flex; align-items: center; justify-content: center; font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 18px; }
+  .crest-text { font-family: 'Manrope', sans-serif; font-size: 14px; line-height: 1.3; }
   .crest-text strong { font-weight: 600; display: block; color: var(--ink); }
   .crest-text span { color: var(--ink-soft); font-size: 12px; }
   .view-toggle { display: flex; align-items: center; gap: 12px; }
@@ -34,12 +34,12 @@
 
   .hero { padding: 48px 0 32px; border-bottom: 1px solid var(--line-soft); }
   .eyebrow { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--terracota); font-weight: 600; margin-bottom: 14px; }
-  .hero h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 48px; line-height: 1.1; letter-spacing: -0.015em; color: var(--ink); margin-bottom: 12px; }
-  .hero h1 em { font-style: italic; color: var(--olive-deep); }
+  .hero h1 { font-family: 'Manrope', sans-serif; font-weight: 500; font-size: 44px; line-height: 1.15; letter-spacing: -0.02em; color: var(--ink); margin-bottom: 12px; }
+  .hero h1 em { font-style: italic; font-weight: 400; color: var(--olive-deep); }
   .hero .lede { font-size: 17px; color: var(--ink-soft); max-width: 620px; line-height: 1.6; }
 
   .period-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 24px 0; border-bottom: 1px solid var(--line-soft); }
-  .period-info { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; color: var(--ink); }
+  .period-info { font-family: 'Manrope', sans-serif; font-size: 22px; font-weight: 500; color: var(--ink); }
   .period-info span { color: var(--olive); font-weight: 400; font-style: italic; }
   .actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .btn-refresh { background: var(--white); color: var(--ink-soft); border: 1px solid var(--line); font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 500; padding: 14px 16px; border-radius: 2px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
@@ -58,12 +58,12 @@
   .kpi:nth-child(3)::before { background: var(--honey); }
   .kpi:nth-child(4)::before { background: var(--navy); }
   .kpi-label { font-size: 12px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; margin-bottom: 10px; }
-  .kpi-value { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; line-height: 1.1; color: var(--ink); }
+  .kpi-value { font-family: 'Manrope', sans-serif; font-size: 28px; font-weight: 500; line-height: 1.1; color: var(--ink); }
   .kpi-foot { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
 
   .section { padding: 32px 0; border-top: 1px solid var(--line-soft); }
   .section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; flex-wrap: wrap; gap: 8px; }
-  .section-head h2 { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; color: var(--ink); }
+  .section-head h2 { font-family: 'Manrope', sans-serif; font-size: 24px; font-weight: 500; color: var(--ink); }
   .section-head .note { font-size: 13px; color: var(--ink-soft); font-style: italic; }
 
   .chart-wrap { background: var(--white); border: 1px solid var(--line-soft); padding: 24px; }
@@ -80,7 +80,7 @@
   td { padding: 12px 14px; border-top: 1px solid var(--line-soft); vertical-align: top; }
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
   td.center { text-align: center; }
-  td.feria-tag { font-family: 'Fraunces', serif; font-weight: 500; color: var(--olive-deep); }
+  td.feria-tag { font-family: 'Manrope', sans-serif; font-weight: 500; color: var(--olive-deep); }
   td.date { color: var(--ink-soft); font-size: 13px; }
   td.user-name { font-weight: 500; font-size: 13px; }
   td.user-rubro { color: var(--ink-soft); font-size: 12px; }
@@ -93,7 +93,7 @@
   .pill.alert { background: var(--danger-soft); color: var(--danger); }
 
   .narrative { background: var(--olive-soft); border-left: 4px solid var(--olive); padding: 24px 28px; margin-top: 24px; }
-  .narrative h3 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px; margin-bottom: 10px; color: var(--olive-deep); }
+  .narrative h3 { font-family: 'Manrope', sans-serif; font-weight: 500; font-size: 18px; margin-bottom: 10px; color: var(--olive-deep); }
   .narrative p { font-size: 14px; line-height: 1.7; color: var(--ink); margin-bottom: 8px; }
   .narrative p:last-child { margin-bottom: 0; }
 
@@ -105,7 +105,7 @@
   .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(42,42,40,0.5); z-index: 100; align-items: center; justify-content: center; padding: 24px; }
   .modal-overlay.active { display: flex; }
   .modal { background: var(--white); border-radius: 4px; padding: 32px; max-width: 380px; width: 100%; }
-  .modal h3 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; margin-bottom: 8px; }
+  .modal h3 { font-family: 'Manrope', sans-serif; font-size: 22px; font-weight: 500; margin-bottom: 8px; }
   .modal p { font-size: 13px; color: var(--ink-soft); margin-bottom: 20px; }
   .modal input { width: 100%; padding: 12px 14px; border: 1px solid var(--line); font-family: 'Manrope', sans-serif; font-size: 15px; border-radius: 2px; margin-bottom: 16px; }
   .modal input:focus { outline: none; border-color: var(--olive); }
@@ -120,7 +120,7 @@
   .alert-card.warning { border-left-color: var(--terracota); }
   .alert-card.info { border-left-color: var(--navy); }
   .alert-card .alert-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); font-weight: 600; margin-bottom: 4px; }
-  .alert-card .alert-value { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; margin-bottom: 4px; }
+  .alert-card .alert-value { font-family: 'Manrope', sans-serif; font-size: 24px; font-weight: 500; margin-bottom: 4px; }
   .alert-card .alert-detail { font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
   .alert-card .alert-detail strong { color: var(--ink); font-weight: 600; }
 
@@ -129,14 +129,14 @@
   @keyframes spin { to { transform: rotate(360deg); } }
   .loading-state p { color: var(--ink-soft); font-size: 14px; }
   .error-state { background: var(--danger-soft); color: var(--danger); padding: 24px; border-radius: 4px; text-align: center; margin: 32px 0; }
-  .error-state strong { display: block; margin-bottom: 8px; font-family: 'Fraunces', serif; font-size: 18px; }
+  .error-state strong { display: block; margin-bottom: 8px; font-family: 'Manrope', sans-serif; font-size: 18px; }
   .error-state code { background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 2px; font-size: 12px; }
 
   .data-fresh { font-size: 11px; color: var(--ink-soft); padding: 4px 10px; background: var(--cream-deep); border-radius: 100px; }
 
   footer { padding: 40px 0 60px; border-top: 1px solid var(--line); margin-top: 48px; }
   .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 32px; }
-  .footer-col h4 { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 600; color: var(--olive-deep); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .footer-col h4 { font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600; color: var(--olive-deep); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
   .footer-col p, .footer-col a { font-size: 13px; color: var(--ink-soft); line-height: 1.7; text-decoration: none; }
   .footer-col a:hover { color: var(--terracota); }
   .footer-meta { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--line-soft); font-size: 11px; color: var(--ink-soft); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
@@ -300,12 +300,16 @@
       <div class="footer-col">
         <h4>Contacto</h4>
         <p><a href="mailto:peumoprodesal@gmail.com">peumoprodesal@gmail.com</a></p>
-        <p>Carmen 33, Peumo</p>
+        <p>Víctor Achurra 398, Peumo</p>
       </div>
       <div class="footer-col">
         <h4>Equipo</h4>
         <p>Juan Miranda · Coordinador</p>
         <p>Felipe Osorio · Asesor Profesional</p>
+        <p>Valeria Osorio · Asesora Técnica</p>
+        <p>Rodrigo Contreras · Asesor Técnico</p>
+        <p>Alexis Maulén · Asesor Técnico</p>
+        <p>Marco Rojas · Asesor Técnico</p>
       </div>
     </div>
     <div class="footer-meta">
@@ -503,26 +507,21 @@ function descargarExcel() {
   const wb = XLSX.utils.book_new();
   const nDias = DATOS.ferias.length;
 
-  // Hoja 1: Aporte regional
+  // Hoja 1: Aporte regional (formato planilla Las Cabras)
+  // Una columna por feria con la fecha como encabezado (cada feria semanal es un día)
   const headers1 = ['N°','Región','Nombre del Mercado','Comuna'];
-  for (let i=1;i<=nDias;i++) headers1.push('Día '+i);
-  for (let i=1;i<=nDias;i++) headers1.push('Semana '+i);
+  DATOS.ferias.forEach(f => headers1.push(fechaCompleta(f.fecha)));
   headers1.push('TOTAL PERÍODO');
   const fila = [DATOS.config.numeroMercadoRegional, DATOS.config.region, DATOS.config.nombreMercado, DATOS.config.comuna];
   c.totalesPorFeria.forEach(t => fila.push(t));
-  c.totalesPorFeria.forEach(t => fila.push(t));
   fila.push(c.totalVentas);
-  const filaFechas = ['','','','Fecha →'];
-  DATOS.ferias.forEach(f => filaFechas.push(fechaCompleta(f.fecha)));
-  DATOS.ferias.forEach(f => filaFechas.push(fechaCompleta(f.fecha)));
-  filaFechas.push('');
   const ws1 = XLSX.utils.aoa_to_sheet([
     ['REPORTE MERCADO CAMPESINO'],
     ['Comuna: '+DATOS.config.comuna+' · Región: '+DATOS.config.region],
     ['Período: '+DATOS.config.periodoTexto],
-    [], filaFechas, headers1, fila
+    [], headers1, fila
   ]);
-  ws1['!cols'] = [{wch:5},{wch:10},{wch:22},{wch:12}, ...Array(nDias*2).fill({wch:12}), {wch:14}];
+  ws1['!cols'] = [{wch:5},{wch:10},{wch:22},{wch:12}, ...Array(nDias).fill({wch:13}), {wch:16}];
   ws1['!merges'] = [{s:{r:0,c:0},e:{r:0,c:headers1.length-1}},{s:{r:1,c:0},e:{r:1,c:headers1.length-1}},{s:{r:2,c:0},e:{r:2,c:headers1.length-1}}];
   XLSX.utils.book_append_sheet(wb, ws1, 'Aporte Peumo');
 

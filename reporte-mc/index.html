@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reporte Mercado Campesino · Peumo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --olive-deep: #4A5D23; --olive: #6B7F3A; --olive-light: #8FA653; --olive-soft: #E8EDDB;
+    --terracota: #B65332; --terracota-soft: #F4DDD1; --honey: #C9971F; --honey-soft: #F8ECC9;
+    --navy: #1F3A5F; --cream: #FAF6EC; --cream-deep: #F2EBDA;
+    --ink: #2A2A28; --ink-soft: #6B6B66; --line: #D8D2BF; --line-soft: #EAE4D2;
+    --white: #FFFFFF; --danger: #C44545; --danger-soft: #F8DCDC;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { background: var(--cream); color: var(--ink); font-family: 'Manrope', sans-serif; font-size: 15px; line-height: 1.6; -webkit-font-smoothing: antialiased; }
+  .container { max-width: 1100px; margin: 0 auto; padding: 0 24px; }
+  .institutional { background: var(--white); border-bottom: 1px solid var(--line); padding: 18px 0; }
+  .institutional .row { display: flex; justify-content: space-between; align-items: center; gap: 24px; flex-wrap: wrap; }
+  .crest { display: flex; align-items: center; gap: 14px; }
+  .crest-circle { width: 44px; height: 44px; border-radius: 50%; background: var(--olive-deep); color: var(--cream); display: flex; align-items: center; justify-content: center; font-family: 'Fraunces', serif; font-weight: 600; font-size: 18px; }
+  .crest-text { font-family: 'Fraunces', serif; font-size: 14px; line-height: 1.3; }
+  .crest-text strong { font-weight: 600; display: block; color: var(--ink); }
+  .crest-text span { color: var(--ink-soft); font-size: 12px; }
+  .view-toggle { display: flex; align-items: center; gap: 12px; }
+  .view-badge { font-size: 11px; padding: 6px 12px; border-radius: 100px; font-weight: 600; letter-spacing: 0.04em; }
+  .view-badge.regional { background: var(--honey-soft); color: var(--honey); }
+  .view-badge.interna { background: var(--olive-soft); color: var(--olive-deep); }
+  .btn-acceso { background: none; border: 1px solid var(--line); padding: 8px 14px; font-family: 'Manrope', sans-serif; font-size: 12px; color: var(--ink-soft); cursor: pointer; border-radius: 2px; }
+  .btn-acceso:hover { border-color: var(--olive); color: var(--olive-deep); }
+
+  .hero { padding: 48px 0 32px; border-bottom: 1px solid var(--line-soft); }
+  .eyebrow { font-size: 11px; letter-spacing: 0.18em; text-transform: uppercase; color: var(--terracota); font-weight: 600; margin-bottom: 14px; }
+  .hero h1 { font-family: 'Fraunces', serif; font-weight: 400; font-size: 48px; line-height: 1.1; letter-spacing: -0.015em; color: var(--ink); margin-bottom: 12px; }
+  .hero h1 em { font-style: italic; color: var(--olive-deep); }
+  .hero .lede { font-size: 17px; color: var(--ink-soft); max-width: 620px; line-height: 1.6; }
+
+  .period-bar { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px; padding: 24px 0; border-bottom: 1px solid var(--line-soft); }
+  .period-info { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; color: var(--ink); }
+  .period-info span { color: var(--olive); font-weight: 400; font-style: italic; }
+  .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .btn-refresh { background: var(--white); color: var(--ink-soft); border: 1px solid var(--line); font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 500; padding: 14px 16px; border-radius: 2px; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+  .btn-refresh:hover { border-color: var(--olive); color: var(--olive-deep); }
+  .btn-refresh svg { width: 14px; height: 14px; }
+  .download-btn { background: var(--olive-deep); color: var(--cream); border: none; font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600; padding: 14px 22px; border-radius: 2px; cursor: pointer; display: flex; align-items: center; gap: 10px; }
+  .download-btn:hover { background: var(--olive); }
+  .download-btn:disabled { background: var(--line); cursor: not-allowed; }
+  .download-btn svg { width: 18px; height: 18px; }
+
+  .kpis { padding: 32px 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .kpi { background: var(--white); border: 1px solid var(--line-soft); padding: 22px 20px; position: relative; }
+  .kpi::before { content: ''; position: absolute; top: 0; left: 0; width: 32px; height: 3px; }
+  .kpi:nth-child(1)::before { background: var(--olive); }
+  .kpi:nth-child(2)::before { background: var(--terracota); }
+  .kpi:nth-child(3)::before { background: var(--honey); }
+  .kpi:nth-child(4)::before { background: var(--navy); }
+  .kpi-label { font-size: 12px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em; font-weight: 500; margin-bottom: 10px; }
+  .kpi-value { font-family: 'Fraunces', serif; font-size: 28px; font-weight: 500; line-height: 1.1; color: var(--ink); }
+  .kpi-foot { font-size: 12px; color: var(--ink-soft); margin-top: 6px; }
+
+  .section { padding: 32px 0; border-top: 1px solid var(--line-soft); }
+  .section-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 20px; flex-wrap: wrap; gap: 8px; }
+  .section-head h2 { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; color: var(--ink); }
+  .section-head .note { font-size: 13px; color: var(--ink-soft); font-style: italic; }
+
+  .chart-wrap { background: var(--white); border: 1px solid var(--line-soft); padding: 24px; }
+  .chart-legend { display: flex; gap: 20px; margin-bottom: 16px; font-size: 12px; color: var(--ink-soft); flex-wrap: wrap; }
+  .chart-legend span { display: flex; align-items: center; gap: 6px; }
+  .chart-legend .swatch { width: 12px; height: 12px; border-radius: 2px; }
+  .chart-canvas-wrap { position: relative; height: 300px; }
+
+  .table-wrap { background: var(--white); border: 1px solid var(--line-soft); overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 600px; }
+  thead tr { background: var(--olive-soft); }
+  th { font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--olive-deep); padding: 12px 14px; text-align: left; white-space: nowrap; }
+  th.num { text-align: right; } th.center { text-align: center; }
+  td { padding: 12px 14px; border-top: 1px solid var(--line-soft); vertical-align: top; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  td.center { text-align: center; }
+  td.feria-tag { font-family: 'Fraunces', serif; font-weight: 500; color: var(--olive-deep); }
+  td.date { color: var(--ink-soft); font-size: 13px; }
+  td.user-name { font-weight: 500; font-size: 13px; }
+  td.user-rubro { color: var(--ink-soft); font-size: 12px; }
+  td.zero { color: var(--line); }
+  tr.total-row { background: var(--cream-deep); }
+  tr.total-row td { font-weight: 700; border-top: 2px solid var(--olive-deep); }
+  tr.total-row td.feria-tag { color: var(--ink); }
+  .pill { display: inline-block; padding: 2px 8px; border-radius: 100px; font-size: 11px; font-weight: 600; }
+  .pill.ok { background: var(--olive-soft); color: var(--olive-deep); }
+  .pill.alert { background: var(--danger-soft); color: var(--danger); }
+
+  .narrative { background: var(--olive-soft); border-left: 4px solid var(--olive); padding: 24px 28px; margin-top: 24px; }
+  .narrative h3 { font-family: 'Fraunces', serif; font-weight: 500; font-size: 18px; margin-bottom: 10px; color: var(--olive-deep); }
+  .narrative p { font-size: 14px; line-height: 1.7; color: var(--ink); margin-bottom: 8px; }
+  .narrative p:last-child { margin-bottom: 0; }
+
+  .internal-only { display: none; }
+  body.equipo .internal-only { display: block; }
+  body.equipo .institutional .view-badge.regional { display: none; }
+  body:not(.equipo) .institutional .view-badge.interna { display: none; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(42,42,40,0.5); z-index: 100; align-items: center; justify-content: center; padding: 24px; }
+  .modal-overlay.active { display: flex; }
+  .modal { background: var(--white); border-radius: 4px; padding: 32px; max-width: 380px; width: 100%; }
+  .modal h3 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; margin-bottom: 8px; }
+  .modal p { font-size: 13px; color: var(--ink-soft); margin-bottom: 20px; }
+  .modal input { width: 100%; padding: 12px 14px; border: 1px solid var(--line); font-family: 'Manrope', sans-serif; font-size: 15px; border-radius: 2px; margin-bottom: 16px; }
+  .modal input:focus { outline: none; border-color: var(--olive); }
+  .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+  .modal button { padding: 10px 18px; font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600; border-radius: 2px; cursor: pointer; border: none; }
+  .modal button.primary { background: var(--olive-deep); color: var(--cream); }
+  .modal button.secondary { background: none; color: var(--ink-soft); border: 1px solid var(--line); }
+  .modal .error-msg { color: var(--danger); font-size: 13px; margin-top: -8px; margin-bottom: 12px; min-height: 18px; }
+
+  .alerts-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; margin-bottom: 24px; }
+  .alert-card { padding: 16px 18px; border-left: 3px solid; background: var(--white); border-top: 1px solid var(--line-soft); border-right: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); }
+  .alert-card.warning { border-left-color: var(--terracota); }
+  .alert-card.info { border-left-color: var(--navy); }
+  .alert-card .alert-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); font-weight: 600; margin-bottom: 4px; }
+  .alert-card .alert-value { font-family: 'Fraunces', serif; font-size: 24px; font-weight: 500; margin-bottom: 4px; }
+  .alert-card .alert-detail { font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
+  .alert-card .alert-detail strong { color: var(--ink); font-weight: 600; }
+
+  .loading-state { text-align: center; padding: 80px 24px; }
+  .loading-state .spinner { width: 40px; height: 40px; border: 3px solid var(--line); border-top-color: var(--olive-deep); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-state p { color: var(--ink-soft); font-size: 14px; }
+  .error-state { background: var(--danger-soft); color: var(--danger); padding: 24px; border-radius: 4px; text-align: center; margin: 32px 0; }
+  .error-state strong { display: block; margin-bottom: 8px; font-family: 'Fraunces', serif; font-size: 18px; }
+  .error-state code { background: rgba(0,0,0,0.05); padding: 2px 6px; border-radius: 2px; font-size: 12px; }
+
+  .data-fresh { font-size: 11px; color: var(--ink-soft); padding: 4px 10px; background: var(--cream-deep); border-radius: 100px; }
+
+  footer { padding: 40px 0 60px; border-top: 1px solid var(--line); margin-top: 48px; }
+  .footer-grid { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 32px; }
+  .footer-col h4 { font-family: 'Fraunces', serif; font-size: 14px; font-weight: 600; color: var(--olive-deep); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .footer-col p, .footer-col a { font-size: 13px; color: var(--ink-soft); line-height: 1.7; text-decoration: none; }
+  .footer-col a:hover { color: var(--terracota); }
+  .footer-meta { margin-top: 32px; padding-top: 20px; border-top: 1px solid var(--line-soft); font-size: 11px; color: var(--ink-soft); display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+  @media (max-width: 768px) {
+    .hero h1 { font-size: 32px; }
+    .kpis { grid-template-columns: repeat(2, 1fr); }
+    .footer-grid { grid-template-columns: 1fr; }
+    .period-info { font-size: 18px; }
+    th, td { padding: 8px 10px; font-size: 12px; }
+  }
+  @media (max-width: 480px) {
+    .kpis { grid-template-columns: 1fr; }
+    .hero h1 { font-size: 26px; }
+    .download-btn, .btn-refresh { width: 100%; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<div class="modal-overlay" id="login-modal">
+  <div class="modal">
+    <h3>Acceso equipo PRODESAL</h3>
+    <p>Ingresa la clave del equipo para acceder al detalle por usuario y a las herramientas de gestión interna.</p>
+    <input type="password" id="clave-input" placeholder="Clave de acceso" onkeypress="if(event.key==='Enter')autenticar()">
+    <div class="error-msg" id="login-error"></div>
+    <div class="modal-actions">
+      <button class="secondary" onclick="cerrarLogin()">Cancelar</button>
+      <button class="primary" onclick="autenticar()">Ingresar</button>
+    </div>
+  </div>
+</div>
+
+<div class="institutional">
+  <div class="container">
+    <div class="row">
+      <div class="crest">
+        <div class="crest-circle">MP</div>
+        <div class="crest-text">
+          <strong>Municipalidad de Peumo</strong>
+          <span>PRODESAL Peumo · INDAP O'Higgins</span>
+        </div>
+      </div>
+      <div class="view-toggle">
+        <span class="view-badge regional">Vista regional</span>
+        <span class="view-badge interna">Vista equipo · interna</span>
+        <button class="btn-acceso" id="btn-acceso" onclick="abrirLogin()">Acceso equipo</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="container">
+  <div class="hero">
+    <div class="eyebrow">Reporte semanal · Mercado Campesino</div>
+    <h1>Resumen operativo de <em id="hero-period">—</em></h1>
+    <p class="lede">Información de ventas, asistencia y participación de los usuarios PRODESAL en el Mercado Campesino de la comuna de Peumo, preparada para la coordinación regional de Mercados Campesinos de INDAP Agencia Las Cabras.</p>
+  </div>
+
+  <div id="contenido-cargando" class="loading-state">
+    <div class="spinner"></div>
+    <p>Cargando datos del Mercado Campesino...</p>
+  </div>
+
+  <div id="contenido-error" style="display:none">
+    <div class="error-state">
+      <strong>No se pudo cargar la información</strong>
+      <span id="error-msg"></span>
+      <p style="margin-top:12px"><button class="btn-refresh" onclick="cargarDatos()" style="display:inline-flex">Reintentar</button></p>
+    </div>
+  </div>
+
+  <div id="contenido-ok" style="display:none">
+    <div class="period-bar">
+      <div class="period-info">
+        Período: <span id="period-range">—</span>
+        <span class="data-fresh" id="data-fresh"></span>
+      </div>
+      <div class="actions">
+        <button class="btn-refresh" onclick="cargarDatos()" title="Actualizar datos">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"/><path d="M1 20v-6h6"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10"/><path d="M20.49 15a9 9 0 0 1-14.85 3.36L1 14"/></svg>
+          Actualizar
+        </button>
+        <button class="download-btn" onclick="descargarExcel()">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          <span id="btn-download-text">Descargar planilla (.xlsx)</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="kpis" id="kpis"></div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>Evolución de ventas por feria</h2>
+        <div class="note">Comparativa con el promedio del período</div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-legend">
+          <span><span class="swatch" style="background: #6B7F3A;"></span>Ventas por feria (CLP)</span>
+          <span><span class="swatch" style="background: #B65332;"></span>Promedio del período</span>
+        </div>
+        <div class="chart-canvas-wrap">
+          <canvas id="ventasChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>Detalle por feria</h2>
+        <div class="note">Totales de cada jornada del Mercado Campesino</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Feria</th><th>Fecha</th><th>Día</th><th class="num">Participantes</th><th class="num">Ventas (CLP)</th></tr>
+          </thead>
+          <tbody id="tabla-ferias"></tbody>
+        </table>
+      </div>
+      <div class="narrative">
+        <h3>Observaciones del período</h3>
+        <p id="narrativa-1"></p>
+        <p id="narrativa-2"></p>
+      </div>
+    </div>
+
+    <div class="section internal-only">
+      <div class="section-head">
+        <h2>Cumplimiento y gestión</h2>
+        <div class="note">Información interna del equipo</div>
+      </div>
+      <div class="alerts-grid" id="alerts-grid"></div>
+    </div>
+
+    <div class="section internal-only">
+      <div class="section-head">
+        <h2>Detalle por usuario</h2>
+        <div class="note">Ranking por ventas acumuladas del período</div>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Usuario</th><th>RUT</th><th>Rubro</th><th class="num">Ferias</th><th class="num">Total ($)</th><th class="center">Carta</th><th class="center">SII</th></tr>
+          </thead>
+          <tbody id="tabla-usuarios"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-col">
+        <h4>Sobre este reporte</h4>
+        <p>Reporte preparado por el equipo PRODESAL Peumo 2026, programa ejecutado por la Municipalidad de Peumo en convenio con INDAP, en el marco de la operación regular del Mercado Campesino comunal.</p>
+      </div>
+      <div class="footer-col">
+        <h4>Contacto</h4>
+        <p><a href="mailto:peumoprodesal@gmail.com">peumoprodesal@gmail.com</a></p>
+        <p>Carmen 33, Peumo</p>
+      </div>
+      <div class="footer-col">
+        <h4>Equipo</h4>
+        <p>Juan Miranda · Coordinador</p>
+        <p>Felipe Osorio · Asesor Profesional</p>
+      </div>
+    </div>
+    <div class="footer-meta">
+      <span>Municipalidad de Peumo · PRODESAL · INDAP O'Higgins</span>
+      <span id="footer-fecha"></span>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// ============================================================
+// CONFIG — pegar URL del Apps Script (Dashboard.gs) tras desplegarlo
+// ============================================================
+const CONFIG = {
+  endpointUrl: "PEGAR_AQUI_LA_URL_DEL_WEB_APP_DEL_DASHBOARD",
+  claveEquipo: "peumo2026"
+};
+
+let DATOS = null;
+let chart = null;
+
+const CLP = n => '$' + Math.round(n).toLocaleString('es-CL');
+const fechaDM = iso => { const d = new Date(iso+'T12:00:00'); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); };
+const fechaCompleta = iso => { const d = new Date(iso+'T12:00:00'); const m=['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']; return String(d.getDate()).padStart(2,'0')+'/'+m[d.getMonth()]+'/'+String(d.getFullYear()).slice(-2); };
+const diaSemana = iso => { const d = new Date(iso+'T12:00:00'); return ['domingo','lunes','martes','miércoles','jueves','viernes','sábado'][d.getDay()]; };
+
+// === Carga de datos ===
+async function cargarDatos() {
+  document.getElementById('contenido-cargando').style.display = 'block';
+  document.getElementById('contenido-error').style.display = 'none';
+  document.getElementById('contenido-ok').style.display = 'none';
+
+  try {
+    if (!CONFIG.endpointUrl || CONFIG.endpointUrl.startsWith('PEGAR')) {
+      throw new Error('URL del endpoint no configurada en el HTML.');
+    }
+    const resp = await fetch(CONFIG.endpointUrl, { method: 'GET', redirect: 'follow' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    if (!data.ok) throw new Error(data.error || 'Respuesta inesperada');
+
+    DATOS = data;
+    renderTodo();
+    document.getElementById('contenido-cargando').style.display = 'none';
+    document.getElementById('contenido-ok').style.display = 'block';
+  } catch (err) {
+    document.getElementById('contenido-cargando').style.display = 'none';
+    document.getElementById('error-msg').textContent = err.message;
+    document.getElementById('contenido-error').style.display = 'block';
+  }
+}
+
+// === Cálculos ===
+function calcular() {
+  const ferias = DATOS.ferias;
+  const usuarios = DATOS.usuarios;
+  const totalesPorFeria = ferias.map((_,i) => usuarios.reduce((s,u) => s + (u.ventas[i]||0), 0));
+  const participantesPorFeria = ferias.map((_,i) => usuarios.filter(u => u.ventas[i] > 0).length);
+  const totalVentas = totalesPorFeria.reduce((a,b) => a+b, 0);
+  const totalParticipaciones = participantesPorFeria.reduce((a,b) => a+b, 0);
+  const promedioFeria = ferias.length ? totalVentas / ferias.length : 0;
+  const promedioParticipantes = ferias.length ? totalParticipaciones / ferias.length : 0;
+  let idxTop = 0;
+  totalesPorFeria.forEach((v,i) => { if (v > totalesPorFeria[idxTop]) idxTop = i; });
+  const feriaTop = ferias.length ? { ...ferias[idxTop], ventas: totalesPorFeria[idxTop] } : null;
+  const usuariosActivos = usuarios.filter(u => u.ventas.some(v => v > 0));
+  const usuariosSinVentas = usuarios.filter(u => !u.ventas.some(v => v > 0));
+  const usuariosSinCarta = usuarios.filter(u => u.carta !== 'si');
+  const usuariosSinSII = usuarios.filter(u => u.sii !== 'si');
+
+  return { totalesPorFeria, participantesPorFeria, totalVentas, totalParticipaciones,
+           promedioFeria, promedioParticipantes, feriaTop, usuariosActivos,
+           usuariosSinVentas, usuariosSinCarta, usuariosSinSII };
+}
+
+// === Render ===
+function renderTodo() {
+  const c = calcular();
+  document.getElementById('hero-period').textContent = DATOS.config.mes || '—';
+  document.getElementById('period-range').textContent = DATOS.config.periodoTexto || '—';
+  const ts = new Date(DATOS.timestamp);
+  document.getElementById('data-fresh').textContent = 'datos al ' + ts.toLocaleString('es-CL', {hour:'2-digit', minute:'2-digit', day:'2-digit', month:'2-digit'});
+  document.getElementById('footer-fecha').textContent = 'Generado el ' + new Date().toLocaleDateString('es-CL', {day:'2-digit', month:'long', year:'numeric'});
+
+  document.getElementById('kpis').innerHTML = `
+    <div class="kpi"><div class="kpi-label">Ventas del período</div><div class="kpi-value">${CLP(c.totalVentas)}</div><div class="kpi-foot">${DATOS.ferias.length} ferias realizadas</div></div>
+    <div class="kpi"><div class="kpi-label">Promedio por feria</div><div class="kpi-value">${CLP(c.promedioFeria)}</div><div class="kpi-foot">${Math.round(c.promedioParticipantes)} participantes promedio</div></div>
+    <div class="kpi"><div class="kpi-label">Participaciones</div><div class="kpi-value">${c.totalParticipaciones}</div><div class="kpi-foot">${c.usuariosActivos.length} de ${DATOS.config.usuariosInscritos} usuarios activos</div></div>
+    <div class="kpi"><div class="kpi-label">Mejor feria</div><div class="kpi-value">${c.feriaTop ? fechaDM(c.feriaTop.fecha) : '—'}</div><div class="kpi-foot">${c.feriaTop ? CLP(c.feriaTop.ventas) : '—'}</div></div>
+  `;
+
+  let html = '';
+  DATOS.ferias.forEach((f,i) => {
+    html += `<tr><td class="feria-tag">F${f.numero}</td><td>${fechaCompleta(f.fecha)}</td><td class="date">${diaSemana(f.fecha)}</td><td class="num">${c.participantesPorFeria[i]}</td><td class="num">${CLP(c.totalesPorFeria[i])}</td></tr>`;
+  });
+  html += `<tr class="total-row"><td class="feria-tag" colspan="3">Total del período</td><td class="num">${c.totalParticipaciones}</td><td class="num">${CLP(c.totalVentas)}</td></tr>`;
+  document.getElementById('tabla-ferias').innerHTML = html;
+
+  if (c.feriaTop) {
+    const variacion = ((c.feriaTop.ventas - c.promedioFeria) / c.promedioFeria * 100).toFixed(1);
+    document.getElementById('narrativa-1').textContent = `Durante el período ${(DATOS.config.periodoTexto||'').toLowerCase()} se realizaron ${DATOS.ferias.length} ferias del Mercado Campesino de Peumo, alcanzando ventas totales por ${CLP(c.totalVentas)} y una participación acumulada de ${c.totalParticipaciones} jornadas de venta por parte de productores PRODESAL.`;
+    document.getElementById('narrativa-2').textContent = `La jornada de mayor venta fue la del ${fechaCompleta(c.feriaTop.fecha)} (${diaSemana(c.feriaTop.fecha)}) con ${CLP(c.feriaTop.ventas)}, un ${variacion}% sobre el promedio del período. De los ${DATOS.config.usuariosInscritos} usuarios inscritos, ${c.usuariosActivos.length} registraron al menos una venta en el período.`;
+  }
+
+  renderChart(c);
+  if (document.body.classList.contains('equipo')) {
+    renderAlertas(c);
+    renderUsuarios();
+  }
+}
+
+function renderChart(c) {
+  if (chart) chart.destroy();
+  chart = new Chart(document.getElementById('ventasChart'), {
+    type: 'bar',
+    data: {
+      labels: DATOS.ferias.map(f => fechaDM(f.fecha)),
+      datasets: [
+        { type:'bar', label:'Ventas', data: c.totalesPorFeria, backgroundColor:'#6B7F3A', borderRadius:2, barPercentage:0.55 },
+        { type:'line', label:'Promedio', data: Array(DATOS.ferias.length).fill(c.promedioFeria), borderColor:'#B65332', borderDash:[5,5], borderWidth:2, pointRadius:0, fill:false }
+      ]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#2A2A28', padding:10,
+        callbacks:{ title: items => 'Feria del ' + items[0].label, label: ctx => ctx.dataset.label + ': ' + CLP(ctx.parsed.y) }}},
+      scales:{
+        y:{ beginAtZero:true, ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K', font:{family:'Manrope',size:11}, color:'#6B6B66' }, grid:{color:'rgba(0,0,0,0.05)'}},
+        x:{ ticks:{ font:{family:'Manrope',size:12,weight:'500'}, color:'#2A2A28', autoSkip:false, maxRotation:0 }, grid:{display:false}}
+      }
+    }
+  });
+}
+
+function renderAlertas(c) {
+  const total = DATOS.usuarios.length;
+  const cumplimientoCarta = total ? ((total - c.usuariosSinCarta.length) / total * 100).toFixed(0) : 0;
+  document.getElementById('alerts-grid').innerHTML = `
+    <div class="alert-card warning"><div class="alert-label">Sin Carta y Ficha</div><div class="alert-value">${c.usuariosSinCarta.length}</div><div class="alert-detail">${c.usuariosSinCarta.map(u => '<strong>'+u.apellidos+'</strong>').join(' · ') || 'Todos cumplen'}</div></div>
+    <div class="alert-card warning"><div class="alert-label">Sin registro SII</div><div class="alert-value">${c.usuariosSinSII.length}</div><div class="alert-detail">Plazo 30 de junio · ${c.usuariosSinSII.map(u => '<strong>'+u.apellidos+'</strong>').join(' · ') || 'Todos registrados'}</div></div>
+    <div class="alert-card info"><div class="alert-label">Sin participación</div><div class="alert-value">${c.usuariosSinVentas.length}</div><div class="alert-detail">Requieren seguimiento individual</div></div>
+    <div class="alert-card info"><div class="alert-label">Cumplimiento documental</div><div class="alert-value">${cumplimientoCarta}%</div><div class="alert-detail">Carta y ficha al día</div></div>
+  `;
+}
+
+function renderUsuarios() {
+  const ordenados = [...DATOS.usuarios].sort((a,b) => b.ventas.reduce((x,y)=>x+y,0) - a.ventas.reduce((x,y)=>x+y,0));
+  let html = '';
+  ordenados.forEach(u => {
+    const total = u.ventas.reduce((a,b)=>a+b, 0);
+    const ferias = u.ventas.filter(v => v>0).length;
+    html += `<tr>
+      <td><div class="user-name">${u.apellidos}</div><div class="user-rubro">${u.nombres}</div></td>
+      <td style="font-family:monospace; font-size:12px;">${u.rut}</td>
+      <td style="font-size:12px;">${u.rubro}</td>
+      <td class="num">${ferias}</td>
+      <td class="num ${total===0?'zero':''}">${total === 0 ? '—' : CLP(total)}</td>
+      <td class="center"><span class="pill ${u.carta==='si'?'ok':'alert'}">${u.carta==='si'?'OK':'NO'}</span></td>
+      <td class="center"><span class="pill ${u.sii==='si'?'ok':'alert'}">${u.sii==='si'?'OK':'NO'}</span></td>
+    </tr>`;
+  });
+  document.getElementById('tabla-usuarios').innerHTML = html;
+}
+
+// === Autenticación ===
+function abrirLogin() { document.getElementById('login-modal').classList.add('active'); document.getElementById('clave-input').focus(); }
+function cerrarLogin() { document.getElementById('login-modal').classList.remove('active'); document.getElementById('clave-input').value=''; document.getElementById('login-error').textContent=''; }
+function aplicarVistaEquipo() {
+  document.body.classList.add('equipo');
+  document.getElementById('btn-acceso').textContent = 'Volver a vista regional';
+  document.getElementById('btn-acceso').onclick = salirVistaEquipo;
+  document.getElementById('btn-download-text').textContent = 'Descargar planilla completa (.xlsx)';
+  if (DATOS) { const c = calcular(); renderAlertas(c); renderUsuarios(); }
+}
+function autenticar() {
+  if (document.getElementById('clave-input').value === CONFIG.claveEquipo) {
+    aplicarVistaEquipo(); cerrarLogin(); sessionStorage.setItem('vistaEquipo','1');
+  } else { document.getElementById('login-error').textContent = 'Clave incorrecta'; }
+}
+function salirVistaEquipo() {
+  document.body.classList.remove('equipo');
+  document.getElementById('btn-acceso').textContent = 'Acceso equipo';
+  document.getElementById('btn-acceso').onclick = abrirLogin;
+  document.getElementById('btn-download-text').textContent = 'Descargar planilla (.xlsx)';
+  sessionStorage.removeItem('vistaEquipo');
+}
+
+// === Descarga Excel ===
+function descargarExcel() {
+  if (!DATOS) return;
+  const c = calcular();
+  const esEquipo = document.body.classList.contains('equipo');
+  const wb = XLSX.utils.book_new();
+  const nDias = DATOS.ferias.length;
+
+  // Hoja 1: Aporte regional
+  const headers1 = ['N°','Región','Nombre del Mercado','Comuna'];
+  for (let i=1;i<=nDias;i++) headers1.push('Día '+i);
+  for (let i=1;i<=nDias;i++) headers1.push('Semana '+i);
+  headers1.push('TOTAL PERÍODO');
+  const fila = [DATOS.config.numeroMercadoRegional, DATOS.config.region, DATOS.config.nombreMercado, DATOS.config.comuna];
+  c.totalesPorFeria.forEach(t => fila.push(t));
+  c.totalesPorFeria.forEach(t => fila.push(t));
+  fila.push(c.totalVentas);
+  const filaFechas = ['','','','Fecha →'];
+  DATOS.ferias.forEach(f => filaFechas.push(fechaCompleta(f.fecha)));
+  DATOS.ferias.forEach(f => filaFechas.push(fechaCompleta(f.fecha)));
+  filaFechas.push('');
+  const ws1 = XLSX.utils.aoa_to_sheet([
+    ['REPORTE MERCADO CAMPESINO'],
+    ['Comuna: '+DATOS.config.comuna+' · Región: '+DATOS.config.region],
+    ['Período: '+DATOS.config.periodoTexto],
+    [], filaFechas, headers1, fila
+  ]);
+  ws1['!cols'] = [{wch:5},{wch:10},{wch:22},{wch:12}, ...Array(nDias*2).fill({wch:12}), {wch:14}];
+  ws1['!merges'] = [{s:{r:0,c:0},e:{r:0,c:headers1.length-1}},{s:{r:1,c:0},e:{r:1,c:headers1.length-1}},{s:{r:2,c:0},e:{r:2,c:headers1.length-1}}];
+  XLSX.utils.book_append_sheet(wb, ws1, 'Aporte Peumo');
+
+  // Hoja 2: Detalle ferias
+  const detalle = [['DETALLE DE FERIAS · MERCADO CAMPESINO PEUMO'],['Período: '+DATOS.config.periodoTexto],[],['Feria N°','Fecha','Día','Participantes','Ventas (CLP)']];
+  DATOS.ferias.forEach((f,i) => detalle.push([f.numero, fechaCompleta(f.fecha), diaSemana(f.fecha), c.participantesPorFeria[i], c.totalesPorFeria[i]]));
+  detalle.push([]);
+  detalle.push(['','','TOTAL', c.totalParticipaciones, c.totalVentas]);
+  detalle.push(['','','PROMEDIO', Math.round(c.promedioParticipantes), Math.round(c.promedioFeria)]);
+  const ws2 = XLSX.utils.aoa_to_sheet(detalle);
+  ws2['!cols'] = [{wch:10},{wch:14},{wch:12},{wch:14},{wch:16}];
+  ws2['!merges'] = [{s:{r:0,c:0},e:{r:0,c:4}},{s:{r:1,c:0},e:{r:1,c:4}}];
+  XLSX.utils.book_append_sheet(wb, ws2, 'Detalle ferias');
+
+  // Hoja 3: Resumen
+  const resumen = [
+    ['RESUMEN EJECUTIVO · MERCADO CAMPESINO PEUMO'], ['Período: '+DATOS.config.periodoTexto], [],
+    ['Indicador','Valor'],
+    ['Comuna', DATOS.config.comuna], ['Región', DATOS.config.region], ['Período reportado', DATOS.config.mes],
+    ['Ferias realizadas', DATOS.ferias.length], ['Usuarios PRODESAL inscritos', DATOS.config.usuariosInscritos],
+    ['Usuarios con al menos una venta', c.usuariosActivos.length],
+    ['Ventas totales del período (CLP)', c.totalVentas],
+    ['Promedio de ventas por feria (CLP)', Math.round(c.promedioFeria)],
+    ['Participaciones acumuladas', c.totalParticipaciones],
+    ['Promedio participantes por feria', Math.round(c.promedioParticipantes)],
+    ['Feria de mayor venta', c.feriaTop ? fechaCompleta(c.feriaTop.fecha) : ''],
+    ['Monto feria de mayor venta (CLP)', c.feriaTop ? c.feriaTop.ventas : 0],
+    [],
+    ['Reporte generado por','PRODESAL Peumo 2026'],
+    ['Contacto','peumoprodesal@gmail.com'],
+    ['Fecha de generación', new Date().toLocaleDateString('es-CL')]
+  ];
+  const ws3 = XLSX.utils.aoa_to_sheet(resumen);
+  ws3['!cols'] = [{wch:38},{wch:30}];
+  ws3['!merges'] = [{s:{r:0,c:0},e:{r:0,c:1}},{s:{r:1,c:0},e:{r:1,c:1}}];
+  XLSX.utils.book_append_sheet(wb, ws3, 'Resumen');
+
+  // Hoja 4: Detalle usuarios (solo equipo)
+  if (esEquipo) {
+    const headerUser = ['Apellidos','Nombres','RUT','Rubro','Teléfono','Carta','SII'];
+    DATOS.ferias.forEach(f => headerUser.push(fechaCompleta(f.fecha)));
+    headerUser.push('Total período','N° ferias');
+    const filasUser = [['DETALLE POR USUARIO · USO INTERNO PRODESAL'], ['Período: '+DATOS.config.periodoTexto], [], headerUser];
+    [...DATOS.usuarios].sort((a,b) => b.ventas.reduce((x,y)=>x+y,0) - a.ventas.reduce((x,y)=>x+y,0)).forEach(u => {
+      const total = u.ventas.reduce((a,b)=>a+b, 0);
+      const ferias = u.ventas.filter(v => v>0).length;
+      const row = [u.apellidos, u.nombres, u.rut, u.rubro, u.telefono, u.carta, u.sii];
+      u.ventas.forEach(v => row.push(v || ''));
+      row.push(total, ferias);
+      filasUser.push(row);
+    });
+    const filaTotal = ['','','','','TOTALES','',''];
+    c.totalesPorFeria.forEach(t => filaTotal.push(t));
+    filaTotal.push(c.totalVentas, c.totalParticipaciones);
+    filasUser.push([]); filasUser.push(filaTotal);
+    const ws4 = XLSX.utils.aoa_to_sheet(filasUser);
+    ws4['!cols'] = [{wch:22},{wch:22},{wch:12},{wch:24},{wch:14},{wch:8},{wch:6}, ...Array(DATOS.ferias.length).fill({wch:12}), {wch:14},{wch:10}];
+    ws4['!merges'] = [{s:{r:0,c:0},e:{r:0,c:headerUser.length-1}},{s:{r:1,c:0},e:{r:1,c:headerUser.length-1}}];
+    XLSX.utils.book_append_sheet(wb, ws4, 'Detalle usuarios');
+  }
+
+  const sufijo = esEquipo ? '_completo' : '';
+  XLSX.writeFile(wb, 'Reporte_MC_Peumo_' + (DATOS.config.mes||'').replace(' ','_') + sufijo + '.xlsx');
+}
+
+// === Init ===
+if (sessionStorage.getItem('vistaEquipo') === '1') aplicarVistaEquipo();
+cargarDatos();
+</script>
+</body>
+</html>

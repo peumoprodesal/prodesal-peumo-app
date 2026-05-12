@@ -123,6 +123,52 @@
 
   .pending-banner { background: var(--honey-soft); color: var(--honey); padding: 10px 14px; border-radius: 4px; margin-top: 12px; font-size: 12px; display: flex; align-items: center; gap: 8px; }
   .pending-banner svg { width: 16px; height: 16px; flex-shrink: 0; }
+
+  /* Confirmación previa */
+  .confirma-stats { display: flex; gap: 6px; padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--line-soft); }
+  .confirma-stat { flex: 1; padding: 8px 10px; border-radius: 4px; text-align: left; }
+  .confirma-stat.tappable { cursor: pointer; transition: transform 0.1s; }
+  .confirma-stat.tappable:active { transform: scale(0.97); }
+  .confirma-stat.si { background: #EAF3DE; }
+  .confirma-stat.no { background: #FCEBEB; }
+  .confirma-stat.sin { background: var(--cream-deep); }
+  .confirma-stat .num { font-size: 18px; font-weight: 700; line-height: 1; }
+  .confirma-stat.si .num { color: #27500A; }
+  .confirma-stat.no .num { color: #791F1F; }
+  .confirma-stat.sin .num { color: var(--ink-soft); }
+  .confirma-stat .lbl { font-size: 10px; text-transform: uppercase; letter-spacing: 0.04em; margin-top: 2px; }
+  .confirma-stat.si .lbl { color: #3B6D11; }
+  .confirma-stat.no .lbl { color: #A32D2D; }
+  .confirma-stat.sin .lbl { color: var(--ink-soft); }
+  .toldos-row { display: flex; align-items: center; gap: 8px; padding-top: 10px; margin-top: 10px; border-top: 1px solid var(--line-soft); font-size: 13px; color: var(--ink-soft); }
+  .toldos-row svg { width: 18px; height: 18px; color: var(--olive); }
+  .toldos-row strong { color: var(--ink); font-weight: 600; }
+  .toldos-row.collapsed-empty { display: none; }
+
+  .confirma-buttons { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px; padding: 0 16px 12px; }
+  .confirma-btn { padding: 8px 4px; background: var(--white); border: 1px solid var(--line); border-radius: 4px; font-family: 'Manrope', sans-serif; font-size: 11px; color: var(--ink-soft); cursor: pointer; text-align: center; display: flex; align-items: center; justify-content: center; gap: 4px; }
+  .confirma-btn:active { background: var(--cream-deep); }
+  .confirma-btn.active.si { background: #EAF3DE; border-color: #97C459; color: #27500A; font-weight: 600; }
+  .confirma-btn.active.no { background: #FCEBEB; border-color: #F09595; color: #791F1F; font-weight: 600; }
+  .confirma-btn.active.sin { background: var(--cream-deep); border-color: var(--line); color: var(--ink); font-weight: 600; }
+  .confirma-btn svg { width: 12px; height: 12px; flex-shrink: 0; }
+
+  /* Tags en el modal de captura */
+  .estado-previo-tag { display: inline-flex; align-items: center; gap: 4px; padding: 3px 8px; border-radius: 100px; font-size: 11px; font-weight: 600; margin-top: 6px; }
+  .estado-previo-tag.si { background: #EAF3DE; color: #27500A; }
+  .estado-previo-tag.no { background: #FCEBEB; color: #791F1F; }
+  .estado-previo-tag svg { width: 11px; height: 11px; }
+
+  /* Modal de lista compartible */
+  .lista-preview { background: var(--cream); border: 1px solid var(--line-soft); border-radius: 4px; padding: 14px 16px; margin-bottom: 16px; max-height: 360px; overflow-y: auto; font-family: 'Manrope', sans-serif; font-size: 13px; line-height: 1.7; white-space: pre-wrap; color: var(--ink); }
+  .lista-empty { padding: 32px 16px; text-align: center; color: var(--ink-soft); font-size: 13px; background: var(--cream); border-radius: 4px; margin-bottom: 16px; }
+  .lista-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .lista-actions.single { grid-template-columns: 1fr; }
+  .lista-btn { padding: 14px; border-radius: 4px; font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center; gap: 8px; }
+  .lista-btn svg { width: 16px; height: 16px; }
+  .lista-btn.copiar { background: var(--cream-deep); color: var(--ink); border: 1px solid var(--line); }
+  .lista-btn.compartir { background: var(--olive-deep); color: var(--cream); }
+  .lista-btn.cerrar { background: var(--white); color: var(--ink-soft); border: 1px solid var(--line); }
 </style>
 </head>
 <body>
@@ -160,6 +206,24 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
       <span id="pending-text">Hay capturas sin sincronizar de otras fechas</span>
     </div>
+    <div class="confirma-stats">
+      <div class="confirma-stat si tappable" onclick="abrirListaCompartir('si')">
+        <div class="num" id="conf-si">0</div>
+        <div class="lbl">confirman <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10" style="vertical-align:-1px;margin-left:2px;"><path d="M9 18l6-6-6-6"/></svg></div>
+      </div>
+      <div class="confirma-stat no tappable" onclick="abrirListaCompartir('no')">
+        <div class="num" id="conf-no">0</div>
+        <div class="lbl">no vienen <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10" style="vertical-align:-1px;margin-left:2px;"><path d="M9 18l6-6-6-6"/></svg></div>
+      </div>
+      <div class="confirma-stat sin tappable" onclick="abrirListaCompartir('sin')">
+        <div class="num" id="conf-sin">0</div>
+        <div class="lbl">sin contactar <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="10" height="10" style="vertical-align:-1px;margin-left:2px;"><path d="M9 18l6-6-6-6"/></svg></div>
+      </div>
+    </div>
+    <div class="toldos-row" id="toldos-row">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21l9-18 9 18M12 3v18"/></svg>
+      <span>Toldos a instalar: <strong id="toldos-num">0</strong></span>
+    </div>
   </div>
 
   <div class="controls">
@@ -167,6 +231,7 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
       <input type="text" id="search" placeholder="Buscar usuario..." oninput="filtrar(this.value)">
     </div>
+    <button class="filter-btn" id="filter-sincontactar" onclick="toggleFiltroSinContactar()">Sin contactar</button>
     <button class="filter-btn" id="filter-pendientes" onclick="toggleFiltroPendientes()">Pendientes</button>
   </div>
 
@@ -192,6 +257,7 @@
     <div class="modal-grip"></div>
     <h3 id="capt-nombre">—</h3>
     <div class="rubro" id="capt-rubro">—</div>
+    <div id="capt-estado-previo"></div>
     <div class="monto-display">
       <div class="label">Monto vendido hoy</div>
       <div class="value" id="capt-monto-display">$0</div>
@@ -210,6 +276,26 @@
       <button class="modal-btn primary" onclick="guardarCaptura()">Guardar</button>
       <button class="modal-btn danger full" onclick="marcarNoAsistio()">No asistió a la feria</button>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-lista">
+  <div class="modal">
+    <div class="modal-grip"></div>
+    <h3 id="lista-titulo">—</h3>
+    <div class="rubro" id="lista-subtitulo">—</div>
+    <div class="lista-preview" id="lista-preview"></div>
+    <div class="lista-actions" id="lista-actions">
+      <button class="lista-btn copiar" onclick="copiarLista()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+        <span id="btn-copiar-text">Copiar</span>
+      </button>
+      <button class="lista-btn compartir" id="btn-compartir" onclick="compartirLista()">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+        Compartir
+      </button>
+    </div>
+    <button class="lista-btn cerrar" style="width:100%;margin-top:8px;" onclick="cerrarModalLista()">Cerrar</button>
   </div>
 </div>
 
@@ -274,11 +360,11 @@ const USUARIOS = [
 ];
 
 // === Estado ===
-let estado = { fechaActual: null, capturaActualRut: null, filtroPendientes: false };
+let estado = { fechaActual: null, capturaActualRut: null, filtroPendientes: false, filtroSinContactar: false };
 
 // === Utilidades ===
 const CLP = n => '$' + Math.round(n).toLocaleString('es-CL');
-const proximoSabado = () => { const d = new Date(); const dias = (6 - d.getDay() + 7) % 7 || 7; d.setDate(d.getDate() + dias); return d.toISOString().slice(0,10); };
+const proximoDiaFeria = () => { const d = new Date(); const dias = (3 - d.getDay() + 7) % 7 || 7; d.setDate(d.getDate() + dias); return d.toISOString().slice(0,10); };
 const fmtFecha = iso => { const d = new Date(iso+'T12:00:00'); const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado']; const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']; return dias[d.getDay()] + ' ' + d.getDate() + ' de ' + meses[d.getMonth()] + ', ' + d.getFullYear(); };
 
 // === Storage ===
@@ -291,7 +377,8 @@ function escribirStorage(data) {
 }
 function getFeriaActual() {
   const data = leerStorage();
-  if (!data[estado.fechaActual]) data[estado.fechaActual] = { fecha: estado.fechaActual, sincronizado: false, capturas: {} };
+  if (!data[estado.fechaActual]) data[estado.fechaActual] = { fecha: estado.fechaActual, sincronizado: false, capturas: {}, confirmaciones: {} };
+  if (!data[estado.fechaActual].confirmaciones) data[estado.fechaActual].confirmaciones = {};
   return data[estado.fechaActual];
 }
 function guardarFeriaActual(feria) {
@@ -302,7 +389,7 @@ function guardarFeriaActual(feria) {
 
 // === Init ===
 function init() {
-  estado.fechaActual = proximoSabado();
+  estado.fechaActual = proximoDiaFeria();
   document.getElementById('fecha-input').value = estado.fechaActual;
   document.getElementById('fecha-display').textContent = fmtFecha(estado.fechaActual);
   document.getElementById('stat-total').textContent = USUARIOS.length;
@@ -334,20 +421,30 @@ function renderLista() {
   let html = '';
   USUARIOS.forEach(u => {
     const c = feria.capturas[u.rut];
+    const conf = (feria.confirmaciones && feria.confirmaciones[u.rut]) || null;
     const matchQuery = !query || (u.apellidos + ' ' + u.nombres + ' ' + u.rubro).toLowerCase().includes(query);
     if (!matchQuery) return;
     if (estado.filtroPendientes && c) return;
+    if (estado.filtroSinContactar && conf) return;
     let icon, amountHtml, rowClass = '';
     if (!c) { icon = '<div class="user-icon pending"></div>'; amountHtml = '<svg class="user-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="9 18 15 12 9 6"/></svg>'; }
     else if (c.asistio === false) { icon = '<div class="user-icon absent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>'; amountHtml = '<span class="user-amount absent-tag">no asistió</span>'; rowClass = 'absent'; }
     else { icon = '<div class="user-icon captured"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg></div>'; amountHtml = '<span class="user-amount">'+CLP(c.monto)+'</span>'; }
-    html += `<div class="user-row ${rowClass}" onclick="abrirCaptura('${u.rut}')">
-      ${icon}
-      <div class="user-info">
-        <div class="user-name">${u.apellidos}, ${u.nombres}</div>
-        <div class="user-rubro">${u.rubro}</div>
+
+    const btnSi = `<button class="confirma-btn ${conf==='si'?'active si':''}" onclick="event.stopPropagation(); marcarConfirma('${u.rut}','si')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirma</button>`;
+    const btnNo = `<button class="confirma-btn ${conf==='no'?'active no':''}" onclick="event.stopPropagation(); marcarConfirma('${u.rut}','no')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>No viene</button>`;
+    const btnSin = `<button class="confirma-btn ${!conf?'active sin':''}" onclick="event.stopPropagation(); marcarConfirma('${u.rut}',null)">Sin contactar</button>`;
+
+    html += `<div>
+      <div class="user-row ${rowClass}" onclick="abrirCaptura('${u.rut}')">
+        ${icon}
+        <div class="user-info">
+          <div class="user-name">${u.apellidos}, ${u.nombres}</div>
+          <div class="user-rubro">${u.rubro}</div>
+        </div>
+        ${amountHtml}
       </div>
-      ${amountHtml}
+      <div class="confirma-buttons">${btnSi}${btnNo}${btnSin}</div>
     </div>`;
   });
   if (!html) html = '<div style="padding:32px 16px; text-align:center; color:var(--ink-soft); font-size:13px;">Sin resultados</div>';
@@ -358,7 +455,127 @@ function filtrar(q) { renderLista(); }
 function toggleFiltroPendientes() {
   estado.filtroPendientes = !estado.filtroPendientes;
   document.getElementById('filter-pendientes').classList.toggle('active', estado.filtroPendientes);
+  if (estado.filtroPendientes) { estado.filtroSinContactar = false; document.getElementById('filter-sincontactar').classList.remove('active'); }
   renderLista();
+}
+function toggleFiltroSinContactar() {
+  estado.filtroSinContactar = !estado.filtroSinContactar;
+  document.getElementById('filter-sincontactar').classList.toggle('active', estado.filtroSinContactar);
+  if (estado.filtroSinContactar) { estado.filtroPendientes = false; document.getElementById('filter-pendientes').classList.remove('active'); }
+  renderLista();
+}
+
+function marcarConfirma(rut, valor) {
+  const feria = getFeriaActual();
+  if (!feria.confirmaciones) feria.confirmaciones = {};
+  if (valor === null) {
+    delete feria.confirmaciones[rut];
+  } else {
+    feria.confirmaciones[rut] = valor;
+  }
+  guardarFeriaActual(feria);
+  renderLista();
+  actualizarStats();
+}
+
+// === Lista compartible ===
+let listaActualTexto = '';
+
+function abrirListaCompartir(tipo) {
+  const feria = getFeriaActual();
+  const confs = feria.confirmaciones || {};
+  let lista = [];
+
+  if (tipo === 'si') {
+    lista = USUARIOS.filter(u => confs[u.rut] === 'si');
+  } else if (tipo === 'no') {
+    lista = USUARIOS.filter(u => confs[u.rut] === 'no');
+  } else {
+    lista = USUARIOS.filter(u => !confs[u.rut]);
+  }
+
+  lista.sort((a,b) => a.apellidos.localeCompare(b.apellidos));
+
+  const titulos = {
+    si: 'Confirmaron asistencia',
+    no: 'No vendrán a la feria',
+    sin: 'Sin contactar aún'
+  };
+  const tituloTexto = {
+    si: 'Confirmaron asistencia',
+    no: 'No vendrán a la feria',
+    sin: 'Pendientes de contactar'
+  };
+
+  document.getElementById('lista-titulo').textContent = titulos[tipo];
+  document.getElementById('lista-subtitulo').textContent = lista.length + ' usuario' + (lista.length === 1 ? '' : 's') + ' · Feria del ' + fmtFecha(estado.fechaActual);
+
+  if (lista.length === 0) {
+    document.getElementById('lista-preview').outerHTML = '<div class="lista-empty" id="lista-preview">Aún no hay usuarios en esta categoría.</div>';
+    listaActualTexto = '';
+    document.getElementById('lista-actions').style.display = 'none';
+  } else {
+    let texto = '*Mercado Campesino Peumo*\n';
+    texto += 'Feria del ' + fmtFecha(estado.fechaActual) + '\n\n';
+    texto += tituloTexto[tipo] + ' (' + lista.length + '):\n';
+    lista.forEach(u => {
+      texto += '• ' + u.apellidos + ', ' + u.nombres + '\n';
+    });
+    if (tipo === 'si') {
+      texto += '\nToldos a instalar: ' + lista.length;
+    }
+
+    listaActualTexto = texto;
+    const previewEl = document.getElementById('lista-preview');
+    previewEl.outerHTML = '<div class="lista-preview" id="lista-preview">' + texto.replace(/</g,'&lt;') + '</div>';
+    document.getElementById('lista-actions').style.display = 'grid';
+
+    if (!navigator.share) {
+      document.getElementById('btn-compartir').style.display = 'none';
+      document.getElementById('lista-actions').classList.add('single');
+    } else {
+      document.getElementById('btn-compartir').style.display = 'flex';
+      document.getElementById('lista-actions').classList.remove('single');
+    }
+  }
+
+  document.getElementById('modal-lista').classList.add('active');
+}
+
+function cerrarModalLista() {
+  document.getElementById('modal-lista').classList.remove('active');
+}
+
+async function copiarLista() {
+  if (!listaActualTexto) return;
+  try {
+    await navigator.clipboard.writeText(listaActualTexto);
+    document.getElementById('btn-copiar-text').textContent = 'Copiado';
+    setTimeout(() => { document.getElementById('btn-copiar-text').textContent = 'Copiar'; }, 1500);
+    toast('Lista copiada al portapapeles');
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = listaActualTexto;
+    ta.style.position = 'fixed';
+    ta.style.opacity = '0';
+    document.body.appendChild(ta);
+    ta.select();
+    try { document.execCommand('copy'); toast('Lista copiada'); }
+    catch (e2) { toast('No se pudo copiar, selecciona manualmente'); }
+    document.body.removeChild(ta);
+  }
+}
+
+async function compartirLista() {
+  if (!listaActualTexto || !navigator.share) return;
+  try {
+    await navigator.share({
+      title: 'Mercado Campesino Peumo',
+      text: listaActualTexto
+    });
+  } catch (e) {
+    if (e.name !== 'AbortError') toast('No se pudo compartir');
+  }
 }
 
 function actualizarStats() {
@@ -367,6 +584,15 @@ function actualizarStats() {
   const monto = Object.values(feria.capturas).reduce((s,c) => s + (c.asistio ? c.monto : 0), 0);
   document.getElementById('stat-registrados').textContent = registrados;
   document.getElementById('stat-monto').textContent = CLP(monto);
+
+  const confs = feria.confirmaciones || {};
+  let nSi = 0, nNo = 0;
+  Object.values(confs).forEach(v => { if (v === 'si') nSi++; else if (v === 'no') nNo++; });
+  const nSin = USUARIOS.length - nSi - nNo;
+  document.getElementById('conf-si').textContent = nSi;
+  document.getElementById('conf-no').textContent = nNo;
+  document.getElementById('conf-sin').textContent = nSin;
+  document.getElementById('toldos-num').textContent = nSi;
 }
 
 // === Modal captura ===
@@ -377,6 +603,11 @@ function abrirCaptura(rut) {
   document.getElementById('capt-nombre').textContent = u.apellidos + ', ' + u.nombres;
   document.getElementById('capt-rubro').textContent = u.rubro + ' · ' + u.rut;
   const feria = getFeriaActual();
+  const conf = (feria.confirmaciones && feria.confirmaciones[rut]) || null;
+  let tagHtml = '';
+  if (conf === 'si') tagHtml = '<span class="estado-previo-tag si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmó asistencia el día previo</span>';
+  else if (conf === 'no') tagHtml = '<span class="estado-previo-tag no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Avisó que no venía</span>';
+  document.getElementById('capt-estado-previo').innerHTML = tagHtml;
   const c = feria.capturas[rut];
   const valor = c && c.asistio ? c.monto : '';
   document.getElementById('capt-input').value = valor;

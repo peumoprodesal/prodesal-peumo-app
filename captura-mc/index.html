@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="theme-color" content="#4A5D23">
+<title>Captura MC Peumo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --olive-deep: #4A5D23;
+    --olive: #6B7F3A;
+    --olive-soft: #E8EDDB;
+    --terracota: #B65332;
+    --honey: #C9971F;
+    --honey-soft: #F8ECC9;
+    --cream: #FAF6EC;
+    --cream-deep: #F2EBDA;
+    --ink: #2A2A28;
+    --ink-soft: #6B6B66;
+    --line: #D8D2BF;
+    --line-soft: #EAE4D2;
+    --white: #FFFFFF;
+    --danger: #C44545;
+    --danger-soft: #F8DCDC;
+    --success: #4A5D23;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { background: var(--cream); color: var(--ink); font-family: 'Manrope', sans-serif; font-size: 15px; line-height: 1.5; -webkit-font-smoothing: antialiased; min-height: 100vh; }
+  body { padding-bottom: 100px; }
+  .container { max-width: 480px; margin: 0 auto; padding: 0 16px; }
+
+  header { background: var(--white); border-bottom: 1px solid var(--line); padding: 14px 0; position: sticky; top: 0; z-index: 10; }
+  .header-row { display: flex; align-items: center; gap: 10px; }
+  .crest { width: 32px; height: 32px; border-radius: 50%; background: var(--olive-deep); color: var(--cream); display: flex; align-items: center; justify-content: center; font-family: 'Fraunces', serif; font-weight: 600; font-size: 13px; flex-shrink: 0; }
+  .header-title { flex: 1; }
+  .header-title strong { font-family: 'Fraunces', serif; font-weight: 500; font-size: 14px; display: block; }
+  .header-title span { font-size: 11px; color: var(--ink-soft); }
+  .net-status { font-size: 10px; padding: 4px 8px; border-radius: 100px; font-weight: 600; }
+  .net-status.online { background: var(--olive-soft); color: var(--olive-deep); }
+  .net-status.offline { background: var(--honey-soft); color: var(--honey); }
+
+  .feria-bar { background: var(--white); border: 1px solid var(--line-soft); border-radius: 4px; padding: 14px 16px; margin-top: 16px; }
+  .feria-label { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 4px; }
+  .feria-fecha { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 500; color: var(--ink); margin-bottom: 8px; }
+  .feria-fecha-input { font-family: 'Manrope', sans-serif; font-size: 14px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 2px; width: 100%; background: var(--cream); }
+  .stats { display: flex; gap: 14px; padding-top: 12px; border-top: 1px solid var(--line-soft); margin-top: 12px; }
+  .stat { flex: 1; }
+  .stat-val { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; line-height: 1.1; }
+  .stat-val .pequeno { color: var(--line); font-size: 14px; }
+  .stat-label { font-size: 11px; color: var(--ink-soft); margin-top: 2px; }
+
+  .controls { display: flex; gap: 8px; margin-top: 12px; }
+  .search-box { flex: 1; position: relative; }
+  .search-box input { width: 100%; padding: 12px 14px 12px 38px; border: 1px solid var(--line); border-radius: 4px; font-family: 'Manrope', sans-serif; font-size: 14px; background: var(--white); }
+  .search-box input:focus { outline: none; border-color: var(--olive); }
+  .search-box svg { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); width: 16px; height: 16px; color: var(--ink-soft); }
+  .filter-btn { padding: 12px 14px; border: 1px solid var(--line); background: var(--white); border-radius: 4px; font-family: 'Manrope', sans-serif; font-size: 13px; color: var(--ink-soft); cursor: pointer; white-space: nowrap; }
+  .filter-btn.active { background: var(--olive-deep); color: var(--cream); border-color: var(--olive-deep); }
+
+  .user-list { margin-top: 12px; background: var(--white); border: 1px solid var(--line-soft); border-radius: 4px; overflow: hidden; }
+  .user-row { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-bottom: 1px solid var(--line-soft); cursor: pointer; min-height: 64px; transition: background 0.15s; }
+  .user-row:last-child { border-bottom: none; }
+  .user-row:active { background: var(--cream-deep); }
+  .user-icon { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; flex-shrink: 0; font-size: 13px; font-weight: 600; }
+  .user-icon.pending { border: 1px dashed var(--line); color: var(--line); }
+  .user-icon.captured { background: var(--olive-soft); color: var(--olive-deep); }
+  .user-icon.absent { background: var(--cream-deep); color: var(--ink-soft); }
+  .user-info { flex: 1; min-width: 0; }
+  .user-name { font-size: 14px; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .user-rubro { font-size: 11px; color: var(--ink-soft); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .user-row.absent .user-name { color: var(--ink-soft); }
+  .user-amount { font-size: 14px; font-weight: 600; color: var(--olive-deep); font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .user-amount.absent-tag { font-weight: 500; color: var(--ink-soft); font-size: 11px; }
+  .user-chevron { color: var(--line); flex-shrink: 0; }
+
+  .footer-action { position: fixed; bottom: 0; left: 0; right: 0; background: linear-gradient(to top, var(--cream) 70%, rgba(250,246,236,0)); padding: 16px; z-index: 50; }
+  .footer-action-inner { max-width: 480px; margin: 0 auto; }
+  .btn-cerrar { width: 100%; padding: 16px; background: var(--olive-deep); color: var(--cream); border: none; font-family: 'Manrope', sans-serif; font-size: 15px; font-weight: 600; border-radius: 4px; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(74,93,35,0.2); }
+  .btn-cerrar:disabled { background: var(--line); box-shadow: none; cursor: not-allowed; }
+  .btn-cerrar svg { width: 18px; height: 18px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(42,42,40,0.6); z-index: 100; align-items: flex-end; }
+  .modal-overlay.active { display: flex; }
+  .modal { background: var(--white); width: 100%; max-width: 480px; margin: 0 auto; border-radius: 16px 16px 0 0; padding: 24px 20px 32px; max-height: 90vh; overflow-y: auto; }
+  .modal-grip { width: 40px; height: 4px; background: var(--line); border-radius: 100px; margin: 0 auto 16px; }
+  .modal h3 { font-family: 'Fraunces', serif; font-size: 22px; font-weight: 500; margin-bottom: 4px; }
+  .modal .rubro { font-size: 13px; color: var(--ink-soft); margin-bottom: 20px; }
+  .monto-display { background: var(--cream); padding: 18px 20px; border-radius: 4px; margin-bottom: 16px; text-align: center; }
+  .monto-display .label { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.06em; margin-bottom: 4px; }
+  .monto-display .value { font-family: 'Fraunces', serif; font-size: 36px; font-weight: 500; color: var(--olive-deep); }
+  .monto-input { width: 100%; padding: 16px; border: 2px solid var(--olive); border-radius: 4px; font-size: 24px; font-family: 'Manrope', sans-serif; font-weight: 600; text-align: center; background: var(--white); margin-bottom: 12px; -moz-appearance: textfield; }
+  .monto-input::-webkit-outer-spin-button, .monto-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .monto-input:focus { outline: none; }
+  .quick-amounts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 20px; }
+  .quick-btn { padding: 12px 4px; background: var(--cream); border: 1px solid var(--line-soft); border-radius: 4px; font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 600; color: var(--ink); cursor: pointer; }
+  .quick-btn:active { background: var(--olive-soft); border-color: var(--olive); }
+  .modal-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .modal-btn { padding: 14px; border-radius: 4px; font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600; cursor: pointer; border: none; }
+  .modal-btn.primary { background: var(--olive-deep); color: var(--cream); }
+  .modal-btn.secondary { background: var(--white); color: var(--ink-soft); border: 1px solid var(--line); }
+  .modal-btn.danger { background: var(--danger-soft); color: var(--danger); }
+  .modal-btn.full { grid-column: 1/-1; }
+  .modal-btn:disabled { opacity: 0.4; }
+
+  .resumen-box { background: var(--cream); padding: 16px; border-radius: 4px; margin-bottom: 16px; }
+  .resumen-row { display: flex; justify-content: space-between; padding: 6px 0; font-size: 14px; }
+  .resumen-row.total { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 12px; font-weight: 700; font-size: 16px; }
+  .resumen-row strong { font-family: 'Fraunces', serif; font-weight: 500; }
+
+  .sync-status { padding: 16px; border-radius: 4px; margin-bottom: 16px; font-size: 14px; display: none; }
+  .sync-status.show { display: block; }
+  .sync-status.loading { background: var(--honey-soft); color: var(--honey); }
+  .sync-status.success { background: var(--olive-soft); color: var(--olive-deep); }
+  .sync-status.error { background: var(--danger-soft); color: var(--danger); }
+
+  .toast { position: fixed; bottom: 90px; left: 16px; right: 16px; max-width: 460px; margin: 0 auto; background: var(--ink); color: var(--cream); padding: 12px 16px; border-radius: 4px; font-size: 13px; z-index: 200; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+  .toast.show { opacity: 1; }
+
+  .pending-banner { background: var(--honey-soft); color: var(--honey); padding: 10px 14px; border-radius: 4px; margin-top: 12px; font-size: 12px; display: flex; align-items: center; gap: 8px; }
+  .pending-banner svg { width: 16px; height: 16px; flex-shrink: 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="container">
+    <div class="header-row">
+      <div class="crest">MP</div>
+      <div class="header-title">
+        <strong>Captura MC Peumo</strong>
+        <span>Municipalidad de Peumo · PRODESAL</span>
+      </div>
+      <div class="net-status online" id="net-status">en línea</div>
+    </div>
+  </div>
+</header>
+
+<div class="container">
+
+  <div class="feria-bar">
+    <div class="feria-label">Feria del</div>
+    <div class="feria-fecha" id="fecha-display">—</div>
+    <input type="date" class="feria-fecha-input" id="fecha-input" onchange="cambiarFecha(this.value)">
+    <div class="stats">
+      <div class="stat">
+        <div class="stat-val"><span id="stat-registrados">0</span><span class="pequeno"> / <span id="stat-total">23</span></span></div>
+        <div class="stat-label">registrados</div>
+      </div>
+      <div class="stat">
+        <div class="stat-val" id="stat-monto">$0</div>
+        <div class="stat-label">acumulado</div>
+      </div>
+    </div>
+    <div class="pending-banner" id="pending-banner" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <span id="pending-text">Hay capturas sin sincronizar de otras fechas</span>
+    </div>
+  </div>
+
+  <div class="controls">
+    <div class="search-box">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input type="text" id="search" placeholder="Buscar usuario..." oninput="filtrar(this.value)">
+    </div>
+    <button class="filter-btn" id="filter-pendientes" onclick="toggleFiltroPendientes()">Pendientes</button>
+  </div>
+
+  <div class="user-list" id="user-list"></div>
+
+</div>
+
+<div class="footer-action">
+  <div class="footer-action-inner">
+    <button class="btn-cerrar" id="btn-cerrar" onclick="abrirCierre()">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+        <polyline points="17 8 12 3 7 8"/>
+        <line x1="12" y1="3" x2="12" y2="15"/>
+      </svg>
+      <span id="btn-cerrar-text">Cerrar feria y sincronizar</span>
+    </button>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-captura">
+  <div class="modal">
+    <div class="modal-grip"></div>
+    <h3 id="capt-nombre">—</h3>
+    <div class="rubro" id="capt-rubro">—</div>
+    <div class="monto-display">
+      <div class="label">Monto vendido hoy</div>
+      <div class="value" id="capt-monto-display">$0</div>
+    </div>
+    <input type="number" inputmode="numeric" pattern="[0-9]*" class="monto-input" id="capt-input" placeholder="0" oninput="actualizarMontoDisplay()">
+    <div class="quick-amounts">
+      <button class="quick-btn" onclick="sumarMonto(5000)">+$5.000</button>
+      <button class="quick-btn" onclick="sumarMonto(10000)">+$10.000</button>
+      <button class="quick-btn" onclick="sumarMonto(20000)">+$20.000</button>
+      <button class="quick-btn" onclick="sumarMonto(30000)">+$30.000</button>
+      <button class="quick-btn" onclick="sumarMonto(50000)">+$50.000</button>
+      <button class="quick-btn" onclick="document.getElementById('capt-input').value=''; actualizarMontoDisplay()">Limpiar</button>
+    </div>
+    <div class="modal-actions">
+      <button class="modal-btn secondary" onclick="cerrarModalCaptura()">Cancelar</button>
+      <button class="modal-btn primary" onclick="guardarCaptura()">Guardar</button>
+      <button class="modal-btn danger full" onclick="marcarNoAsistio()">No asistió a la feria</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="modal-cierre">
+  <div class="modal">
+    <div class="modal-grip"></div>
+    <h3>Cerrar feria</h3>
+    <div class="rubro" id="cierre-fecha">—</div>
+    <div class="resumen-box" id="cierre-resumen"></div>
+    <div class="sync-status loading" id="sync-loading">
+      <strong>Sincronizando...</strong> Enviando datos al INTEGRADO.
+    </div>
+    <div class="sync-status success" id="sync-success">
+      <strong>Listo.</strong> Datos enviados al INTEGRADO. Puedes cerrar la app.
+    </div>
+    <div class="sync-status error" id="sync-error">
+      <strong>No se pudo sincronizar.</strong> <span id="sync-error-msg"></span> Los datos quedan guardados localmente y puedes intentar de nuevo más tarde.
+    </div>
+    <div class="modal-actions" id="cierre-actions">
+      <button class="modal-btn secondary" onclick="cerrarModalCierre()">Volver</button>
+      <button class="modal-btn primary" onclick="sincronizar()">Sincronizar al INTEGRADO</button>
+      <button class="modal-btn secondary full" onclick="descargarRespaldo()">Descargar respaldo (.json)</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================================================
+// CONFIG — editar URL del Apps Script tras desplegarlo
+// ============================================================
+const CONFIG = {
+  appsScriptUrl: "PEGAR_AQUI_LA_URL_DEL_WEB_APP_DE_APPS_SCRIPT",
+  storageKey: "captura_mc_peumo_v1"
+};
+
+const USUARIOS = [
+  { rut:"7016854-5", apellidos:"AMARO ALFARO", nombres:"CLARA PILAR DEL CARMEN", rubro:"Fruta deshidratada" },
+  { rut:"8293891-5", apellidos:"CERÓN GONZÁLEZ", nombres:"LEANDRA FILOMENA", rubro:"Hortalizas" },
+  { rut:"6250850-7", apellidos:"BOZO GONZÁLEZ", nombres:"HELGA BRUNILDA", rubro:"Plantas Ornamentales" },
+  { rut:"9295747-0", apellidos:"COLINA LÓPEZ", nombres:"JAIME FERNANDO", rubro:"Cítricos" },
+  { rut:"6255102-k", apellidos:"DÍAZ URRA", nombres:"EUSEBIA CARMEN", rubro:"Paltos" },
+  { rut:"10123280-8", apellidos:"ESCALONA MORALES", nombres:"MIGUEL ANGEL", rubro:"Frutas y Hortalizas" },
+  { rut:"9347065-6", apellidos:"FUENTES CASTRO", nombres:"REBECA DEL CARMEN", rubro:"Plantas Ornamentales" },
+  { rut:"8250145-2", apellidos:"FUENTES DONOSO", nombres:"LUCÍA DEL PILAR", rubro:"Miel y Subproductos" },
+  { rut:"9860317-4", apellidos:"LLANOS MATAMALA", nombres:"SUSANA ISABEL", rubro:"Huevos" },
+  { rut:"15446779-3", apellidos:"MARTÍNEZ GUTIÉRREZ", nombres:"VIVIANA DEL", rubro:"Paltos" },
+  { rut:"15523443-1", apellidos:"MAULÉN TORO", nombres:"ALEJANDRA CELINDA", rubro:"Plantas Ornamentales" },
+  { rut:"9052159-4", apellidos:"MIRANDA PERALTA", nombres:"HERNÁN NEMESIO", rubro:"Artesanía Madera Reciclada" },
+  { rut:"18650401-1", apellidos:"MORI GATICA", nombres:"FRANCISCA ALEJANDRA", rubro:"Plantas Ornamentales" },
+  { rut:"6725536-4", apellidos:"MUÑOZ CORREA", nombres:"OLIVIA DEL CARMEN", rubro:"Huevos" },
+  { rut:"9021311-3", apellidos:"PÉREZ MARTÍNEZ", nombres:"VIOLETA DEL CARMEN", rubro:"Hortalizas" },
+  { rut:"11408393-3", apellidos:"ROA SAAVEDRA", nombres:"LORENA LOURDES", rubro:"Plantas Ornamentales" },
+  { rut:"7503713-9", apellidos:"ROJAS GONZÁLEZ", nombres:"LUZMIRA ELENA", rubro:"Frutas y Hortalizas" },
+  { rut:"13304067-6", apellidos:"SÁNCHEZ ROZAS", nombres:"MARCIA VERÓNICA", rubro:"Plantas Ornamentales" },
+  { rut:"12367890-7", apellidos:"SILVA BUSTOS", nombres:"PATRICIA DEL CARMEN", rubro:"Paltas, hortalizas, frutas, verduras" },
+  { rut:"13099661-2", apellidos:"SILVA ZAVALLA", nombres:"CLAUDIA ANDREA", rubro:"Hortalizas" },
+  { rut:"14394842-0", apellidos:"VILCHES COLINA", nombres:"BERNARDO ANDRÉS", rubro:"Artesanía Cuero y Madera" },
+  { rut:"9568357-6", apellidos:"VILLAVICENCIO PULGAR", nombres:"TERESA DEL CARMEN", rubro:"Huevos" },
+  { rut:"7459513-8", apellidos:"ZÚÑIGA OSORIO", nombres:"GLADYS DE LAS MERCEDES", rubro:"Plantas Ornamentales y F. corte" }
+];
+
+// === Estado ===
+let estado = { fechaActual: null, capturaActualRut: null, filtroPendientes: false };
+
+// === Utilidades ===
+const CLP = n => '$' + Math.round(n).toLocaleString('es-CL');
+const proximoSabado = () => { const d = new Date(); const dias = (6 - d.getDay() + 7) % 7 || 7; d.setDate(d.getDate() + dias); return d.toISOString().slice(0,10); };
+const fmtFecha = iso => { const d = new Date(iso+'T12:00:00'); const dias = ['domingo','lunes','martes','miércoles','jueves','viernes','sábado']; const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre']; return dias[d.getDay()] + ' ' + d.getDate() + ' de ' + meses[d.getMonth()] + ', ' + d.getFullYear(); };
+
+// === Storage ===
+function leerStorage() {
+  try { return JSON.parse(localStorage.getItem(CONFIG.storageKey) || '{}'); }
+  catch(e) { return {}; }
+}
+function escribirStorage(data) {
+  localStorage.setItem(CONFIG.storageKey, JSON.stringify(data));
+}
+function getFeriaActual() {
+  const data = leerStorage();
+  if (!data[estado.fechaActual]) data[estado.fechaActual] = { fecha: estado.fechaActual, sincronizado: false, capturas: {} };
+  return data[estado.fechaActual];
+}
+function guardarFeriaActual(feria) {
+  const data = leerStorage();
+  data[estado.fechaActual] = feria;
+  escribirStorage(data);
+}
+
+// === Init ===
+function init() {
+  estado.fechaActual = proximoSabado();
+  document.getElementById('fecha-input').value = estado.fechaActual;
+  document.getElementById('fecha-display').textContent = fmtFecha(estado.fechaActual);
+  document.getElementById('stat-total').textContent = USUARIOS.length;
+  renderLista();
+  actualizarStats();
+  verificarPendientes();
+  window.addEventListener('online', actualizarNet);
+  window.addEventListener('offline', actualizarNet);
+  actualizarNet();
+}
+
+function actualizarNet() {
+  const el = document.getElementById('net-status');
+  if (navigator.onLine) { el.textContent = 'en línea'; el.className = 'net-status online'; }
+  else { el.textContent = 'sin red'; el.className = 'net-status offline'; }
+}
+
+function cambiarFecha(nueva) {
+  estado.fechaActual = nueva;
+  document.getElementById('fecha-display').textContent = fmtFecha(nueva);
+  renderLista();
+  actualizarStats();
+}
+
+// === Render lista ===
+function renderLista() {
+  const feria = getFeriaActual();
+  const query = (document.getElementById('search').value || '').toLowerCase();
+  let html = '';
+  USUARIOS.forEach(u => {
+    const c = feria.capturas[u.rut];
+    const matchQuery = !query || (u.apellidos + ' ' + u.nombres + ' ' + u.rubro).toLowerCase().includes(query);
+    if (!matchQuery) return;
+    if (estado.filtroPendientes && c) return;
+    let icon, amountHtml, rowClass = '';
+    if (!c) { icon = '<div class="user-icon pending"></div>'; amountHtml = '<svg class="user-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><polyline points="9 18 15 12 9 6"/></svg>'; }
+    else if (c.asistio === false) { icon = '<div class="user-icon absent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg></div>'; amountHtml = '<span class="user-amount absent-tag">no asistió</span>'; rowClass = 'absent'; }
+    else { icon = '<div class="user-icon captured"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" width="14" height="14"><polyline points="20 6 9 17 4 12"/></svg></div>'; amountHtml = '<span class="user-amount">'+CLP(c.monto)+'</span>'; }
+    html += `<div class="user-row ${rowClass}" onclick="abrirCaptura('${u.rut}')">
+      ${icon}
+      <div class="user-info">
+        <div class="user-name">${u.apellidos}, ${u.nombres}</div>
+        <div class="user-rubro">${u.rubro}</div>
+      </div>
+      ${amountHtml}
+    </div>`;
+  });
+  if (!html) html = '<div style="padding:32px 16px; text-align:center; color:var(--ink-soft); font-size:13px;">Sin resultados</div>';
+  document.getElementById('user-list').innerHTML = html;
+}
+
+function filtrar(q) { renderLista(); }
+function toggleFiltroPendientes() {
+  estado.filtroPendientes = !estado.filtroPendientes;
+  document.getElementById('filter-pendientes').classList.toggle('active', estado.filtroPendientes);
+  renderLista();
+}
+
+function actualizarStats() {
+  const feria = getFeriaActual();
+  const registrados = Object.keys(feria.capturas).length;
+  const monto = Object.values(feria.capturas).reduce((s,c) => s + (c.asistio ? c.monto : 0), 0);
+  document.getElementById('stat-registrados').textContent = registrados;
+  document.getElementById('stat-monto').textContent = CLP(monto);
+}
+
+// === Modal captura ===
+function abrirCaptura(rut) {
+  const u = USUARIOS.find(x => x.rut === rut);
+  if (!u) return;
+  estado.capturaActualRut = rut;
+  document.getElementById('capt-nombre').textContent = u.apellidos + ', ' + u.nombres;
+  document.getElementById('capt-rubro').textContent = u.rubro + ' · ' + u.rut;
+  const feria = getFeriaActual();
+  const c = feria.capturas[rut];
+  const valor = c && c.asistio ? c.monto : '';
+  document.getElementById('capt-input').value = valor;
+  actualizarMontoDisplay();
+  document.getElementById('modal-captura').classList.add('active');
+  setTimeout(() => document.getElementById('capt-input').focus(), 100);
+}
+
+function cerrarModalCaptura() {
+  document.getElementById('modal-captura').classList.remove('active');
+  estado.capturaActualRut = null;
+}
+
+function actualizarMontoDisplay() {
+  const v = parseInt(document.getElementById('capt-input').value) || 0;
+  document.getElementById('capt-monto-display').textContent = CLP(v);
+}
+
+function sumarMonto(n) {
+  const actual = parseInt(document.getElementById('capt-input').value) || 0;
+  document.getElementById('capt-input').value = actual + n;
+  actualizarMontoDisplay();
+}
+
+function guardarCaptura() {
+  const monto = parseInt(document.getElementById('capt-input').value) || 0;
+  const feria = getFeriaActual();
+  feria.capturas[estado.capturaActualRut] = { monto, asistio: true, timestamp: new Date().toISOString() };
+  feria.sincronizado = false;
+  guardarFeriaActual(feria);
+  cerrarModalCaptura();
+  renderLista();
+  actualizarStats();
+  toast('Registrado · ' + CLP(monto));
+}
+
+function marcarNoAsistio() {
+  const feria = getFeriaActual();
+  feria.capturas[estado.capturaActualRut] = { monto: 0, asistio: false, timestamp: new Date().toISOString() };
+  feria.sincronizado = false;
+  guardarFeriaActual(feria);
+  cerrarModalCaptura();
+  renderLista();
+  actualizarStats();
+  toast('Marcado como no asistió');
+}
+
+// === Cierre y sincronización ===
+function abrirCierre() {
+  const feria = getFeriaActual();
+  const total = Object.keys(feria.capturas).length;
+  const asistieron = Object.values(feria.capturas).filter(c => c.asistio).length;
+  const noAsistieron = Object.values(feria.capturas).filter(c => !c.asistio).length;
+  const monto = Object.values(feria.capturas).reduce((s,c) => s + (c.asistio ? c.monto : 0), 0);
+  const pendientes = USUARIOS.length - total;
+  document.getElementById('cierre-fecha').textContent = fmtFecha(estado.fechaActual);
+  document.getElementById('cierre-resumen').innerHTML = `
+    <div class="resumen-row"><span>Vendieron</span><strong>${asistieron} usuarios</strong></div>
+    <div class="resumen-row"><span>No asistieron</span><strong>${noAsistieron} usuarios</strong></div>
+    <div class="resumen-row"><span>Sin registrar</span><strong>${pendientes} usuarios</strong></div>
+    <div class="resumen-row total"><span>Total ventas</span><strong>${CLP(monto)}</strong></div>
+  `;
+  ['sync-loading','sync-success','sync-error'].forEach(id => document.getElementById(id).classList.remove('show'));
+  document.getElementById('cierre-actions').style.display = 'grid';
+  document.getElementById('modal-cierre').classList.add('active');
+}
+
+function cerrarModalCierre() {
+  document.getElementById('modal-cierre').classList.remove('active');
+}
+
+async function sincronizar() {
+  const feria = getFeriaActual();
+  document.getElementById('cierre-actions').style.display = 'none';
+  document.getElementById('sync-loading').classList.add('show');
+  ['sync-success','sync-error'].forEach(id => document.getElementById(id).classList.remove('show'));
+
+  const payload = {
+    accion: 'guardar_feria',
+    fecha: estado.fechaActual,
+    capturas: Object.entries(feria.capturas).map(([rut, c]) => ({ rut, monto: c.asistio ? c.monto : 0, asistio: c.asistio }))
+  };
+
+  try {
+    if (!CONFIG.appsScriptUrl || CONFIG.appsScriptUrl.startsWith("PEGAR")) {
+      throw new Error('URL de Apps Script no configurada. Edita CONFIG.appsScriptUrl en el archivo.');
+    }
+    const resp = await fetch(CONFIG.appsScriptUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+      redirect: 'follow'
+    });
+    const text = await resp.text();
+    let data;
+    try { data = JSON.parse(text); } catch(e) { data = { ok: false, error: text.substring(0,200) }; }
+    if (!data.ok) throw new Error(data.error || 'Respuesta inesperada del servidor');
+
+    feria.sincronizado = true;
+    feria.timestampSync = new Date().toISOString();
+    guardarFeriaActual(feria);
+    document.getElementById('sync-loading').classList.remove('show');
+    document.getElementById('sync-success').classList.add('show');
+    setTimeout(() => verificarPendientes(), 500);
+  } catch(err) {
+    document.getElementById('sync-loading').classList.remove('show');
+    document.getElementById('sync-error-msg').textContent = err.message || 'Error de red.';
+    document.getElementById('sync-error').classList.add('show');
+    document.getElementById('cierre-actions').style.display = 'grid';
+  }
+}
+
+function descargarRespaldo() {
+  const feria = getFeriaActual();
+  const blob = new Blob([JSON.stringify({ fecha: estado.fechaActual, feria, usuarios: USUARIOS }, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'captura_mc_' + estado.fechaActual + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Respaldo descargado');
+}
+
+function verificarPendientes() {
+  const data = leerStorage();
+  const pendientes = Object.values(data).filter(f => !f.sincronizado && Object.keys(f.capturas).length > 0 && f.fecha !== estado.fechaActual);
+  const banner = document.getElementById('pending-banner');
+  if (pendientes.length > 0) {
+    banner.style.display = 'flex';
+    document.getElementById('pending-text').textContent = 'Hay ' + pendientes.length + ' fecha(s) con capturas sin sincronizar';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+init();
+</script>
+</body>
+</html>

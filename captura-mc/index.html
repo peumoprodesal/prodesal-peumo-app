@@ -356,8 +356,7 @@ const USUARIOS = [
   { rut:"13099661-2", apellidos:"SILVA ZAVALLA", nombres:"CLAUDIA ANDREA", rubro:"Hortalizas" },
   { rut:"14394842-0", apellidos:"VILCHES COLINA", nombres:"BERNARDO ANDRÉS", rubro:"Artesanía Cuero y Madera" },
   { rut:"9568357-6", apellidos:"VILLAVICENCIO PULGAR", nombres:"TERESA DEL CARMEN", rubro:"Huevos" },
-  { rut:"7459513-8", apellidos:"ZÚÑIGA OSORIO", nombres:"GLADYS DE LAS MERCEDES", rubro:"Plantas Ornamentales y F. corte" },
-  { rut:"17502148-5", apellidos:"CATALÁN VERGARA", nombres:"FABIÁN ALEJANDRO", rubro:"Actividades Campesinas" }
+  { rut:"7459513-8", apellidos:"ZÚÑIGA OSORIO", nombres:"GLADYS DE LAS MERCEDES", rubro:"Plantas Ornamentales y F. corte" }
 ];
 
 // === Estado ===
@@ -420,7 +419,8 @@ function renderLista() {
   const feria = getFeriaActual();
   const query = (document.getElementById('search').value || '').toLowerCase();
   let html = '';
-  USUARIOS.forEach(u => {
+  const usuariosOrdenados = [...USUARIOS].sort((a,b) => a.apellidos.localeCompare(b.apellidos, 'es'));
+  usuariosOrdenados.forEach(u => {
     const c = feria.capturas[u.rut];
     const conf = (feria.confirmaciones && feria.confirmaciones[u.rut]) || null;
     const matchQuery = !query || (u.apellidos + ' ' + u.nombres + ' ' + u.rubro).toLowerCase().includes(query);

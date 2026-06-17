@@ -423,21 +423,26 @@ function ivD(n){
 }
 
 // ========= ESTANDARIZAR ASESOR =========
+const stripAcc=s=>(s||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'');
 function stdAsesor(val){
   if(!val)return cfg.abr||'';
-  const n=(val||'').replace(/\.\s*/g,'.').toUpperCase().trim();
+  const norm=s=>stripAcc(s).replace(/\.\s*/g,'.').toUpperCase().trim();
+  const n=norm(val);
+  if(!n)return val;
   const match=EQUIPO.find(e=>{
-    const abr=e.abr.replace(/\.\s*/g,'.').toUpperCase().trim();
-    const nom=e.nombre.toUpperCase().trim();
-    return n===abr||n===nom||n.includes(abr)||abr.includes(n);
+    const abr=norm(e.abr);
+    const nom=norm(e.nombre);
+    return n===abr||n===nom||n.includes(abr)||abr.includes(n)||n.includes(nom);
   });
   return match?match.abr:val;
 }
+// Clave canónica: resuelve nombre completo o abreviatura (con/sin tildes) al mismo identificador
+const normTec=v=>{if(!v)return'';const c=stdAsesor(v);return stripAcc(c).replace(/\.\s*/g,'.').toUpperCase().trim()};
 
 // ========= LISTA VISITAS =========
 function rVL(){
   if(!cfg.nombre)return '<div class="warn">⚠️ Ve a <b>⚙️ Config</b> primero</div>';
-  const normT=s=>(s||'').replace(/\.\s*/g,'.').toUpperCase().trim();
+  const normT=normTec;
   const fAsesor=window._visFilter||'__todos__';
   let filtered=fAsesor==='__todos__'?vis:vis.filter(v=>normT(v.asesor)===normT(fAsesor));
   const s=[...filtered].sort((a,b)=>{const dc=(b.fecha||'').localeCompare(a.fecha||'');if(dc!==0)return dc;return(a.agricultor||'').localeCompare(b.agricultor||'')});
@@ -772,7 +777,7 @@ async function deleteFromCloud(id){
 function rInf(){
   if(!cfg.nombre)return '<div class="warn">⚠️ Ve a <b>⚙️ Config</b> primero</div>';
   const sem=wk(new Date()),mi=new Date().getMonth();
-  const normT=s=>(s||'').replace(/\.\s*/g,'.').toUpperCase().trim();
+  const normT=normTec;
   
   // Coverage metrics
   const META_TEC=400;
@@ -935,7 +940,7 @@ function rInf(){
 }
 
 function renderCobMatrix(){
-  const normT=s=>(s||'').replace(/\.\s*/g,'.').toUpperCase().trim();
+  const normT=normTec;
   const sel=document.getElementById('cobTec')?.value||'';
   const container=document.getElementById('cobMatrixContainer');
   if(!container)return;

@@ -305,7 +305,7 @@ async function testApi(){
     const r=await fetch('https://api.anthropic.com/v1/messages',{
       method:'POST',
       headers:{'Content-Type':'application/json','x-api-key':ak,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
-      body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:20,messages:[{role:'user',content:'Responde solo: OK'}]})
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:20,messages:[{role:'user',content:'Responde solo: OK'}]})
     });
     if(r.ok){
       cfg.apiKey=ak;SV('cfg',cfg);
@@ -611,7 +611,7 @@ async function ocrFolio(imgBase64){
         'anthropic-dangerous-direct-browser-access':'true'
       },
       body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
+        model:'claude-sonnet-4-6',
         max_tokens:1200,
         messages:[{
           role:'user',

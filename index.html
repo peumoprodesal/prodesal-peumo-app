@@ -345,7 +345,7 @@ function rNom(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="flex:1;min-width:0">
           <b style="font-size:13px">${h(nm)}</b>
-          ${u.n_ifp?`<span class="tg tg-b">${u.n_ifp} IFP</span>`:''}
+          ${u.n_ifp?`<span class="tg tg-b">${u.n_ifp} IFP</span>`:''}${u.n_riego?`<span class="tg" style="background:#e0f2fe;color:#0369a1">${u.n_riego} Riego</span>`:''}
           ${(u.pri&&u.pri.ESTADO)?'<span class="tg tg-p">PRI</span>':''}
           ${u.ceaf?'<span class="tg tg-o">CEAF</span>':''}
           <div class="mu" style="margin-top:2px">${u.rut||''} · ${u.rubro||''} · ${u.tecnico||''}${u.ibv?` · <b style="color:#0d9488">IBV ${fm(u.ibv)}</b>`:''}${u.tipificacion?` · <span style="color:#7c3aed;font-weight:600;font-size:10px">${h(u.tipificacion)}</span>`:''}</div>
@@ -417,6 +417,7 @@ function rFicha(){
         </div>
       </div>
       ${(u.ifp&&typeof u.ifp==='object'&&Object.keys(u.ifp).length)?`<div class="fs"><h4>📦 IFP (${u.n_ifp||0} proy. — ${fm(u.total_ifp||0)})</h4>${Object.keys(u.ifp).sort().map(y=>`<div class="ifp"><div><b>${y}</b> — ${h(u.ifp[y])}</div><div style="font-weight:600;color:var(--g);white-space:nowrap;margin-left:8px">${fm((u.ifp_m&&u.ifp_m[y])||0)}</div></div>`).join('')}</div>`:'<div class="fs"><h4>📦 IFP</h4><p class="mu">Sin proyectos</p></div>'}
+      ${(u.riego&&u.riego.length)?`<div class="fs"><h4>💧 Riego (${u.n_riego||0} proy. — ${fm(u.total_riego||0)})</h4>${u.riego.sort((a,b)=>a.a-b.a).map(r=>`<div class="ifp"><div><b>${r.a}</b> — ${h(r.p)}${r.d?' <span style="color:#6b7280;font-size:10px">('+h(r.d)+')</span>':''}</div><div style="font-weight:600;color:#0ea5e9;white-space:nowrap;margin-left:8px">${fm(r.m||0)}</div></div>`).join('')}</div>`:''}
       ${(u.pri&&u.pri.ESTADO)?`<div class="fs"><h4>💧 Riego PRI — ${u.pri.ESTADO}</h4>${u.pri.PROYECTO?`<p style="font-size:12px;margin-top:4px">${h(u.pri.PROYECTO)}</p>`:''}${u.pri.TENENCIA?`<p class="mu mt">${u.pri.TENENCIA}${u.pri.SUPERFICIE?' · '+u.pri.SUPERFICIE+' ha':''}</p>`:''}</div>`:''}
       ${u.ceaf?'<div class="fs"><h4>🤝 CEAF</h4><span class="tg tg-o">Incluido</span></div>':''}
       <div class="fs"><h4>📋 Mis visitas (${uv.length})</h4>

@@ -292,8 +292,12 @@
     </div>
     <div class="modal-actions" id="cierre-actions">
       <button class="modal-btn secondary" onclick="cerrarModalCierre()">Volver</button>
-      <button class="modal-btn primary" onclick="sincronizar()">Sincronizar al INTEGRADO</button>
-      <button class="modal-btn secondary full" onclick="descargarRespaldo()">Descargar respaldo (.json)</button>
+      <button class="modal-btn primary" onclick="sincronizar()">Sincronizar esta feria</button>
+      <button class="modal-btn primary full" onclick="sincronizarPendientes()">Sincronizar TODAS las pendientes</button>
+      <button class="modal-btn secondary full" onclick="exportarTodo()">⬇ Exportar TODO (.json) — respaldo completo</button>
+      <button class="modal-btn secondary full" onclick="document.getElementById('import-file').click()">Importar respaldo (.json)</button>
+      <button class="modal-btn secondary full" onclick="descargarRespaldo()">Descargar respaldo de esta feria</button>
+      <input type="file" id="import-file" accept=".json,application/json" style="display:none" onchange="importarRespaldo(this)">
     </div>
   </div>
 </div>
@@ -667,6 +671,123 @@ async function sincronizar() {
     document.getElementById('sync-error').classList.add('show');
     document.getElementById('cierre-actions').style.display = 'grid';
   }
+}
+function exportarTodo() {
+  const data = leerStorage();
+  const fechas = Object.keys(data);
+  if (!fechas.length) { toast('No hay ferias guardadas'); return; }
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'captura_mc_TODAS_' + new Date().toISOString().slice(0,10) + '.json';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  toast('Exportadas ' + fechas.length + ' fecha(s) en un archivo');
+}
+async function sincronizarPendientes() {
+  const data = leerStorage();
+  const fechas = Object.keys(data).filter(f =>
+    data[f] && data[f].capturas && Object.keys(data[f].capturas).length > 0 && !data[f].sincronizado
+  );
+  if (!fechas.length) { toast('No hay ferias pendientes por sincronizar'); return; }
+  document.getElementById('cierre-actions').style.display = 'none';
+  document.getElementById('sync-loading').classList.add('show');
+  ['sync-success','sync-error'].forEach(id => document.getElementById(id).classList.remove('show'));
+  let ok = 0, fail = 0, ultimoError = '';
+  for (let i = 0; i < fechas.length; i++) {
+    const f = fechas[i];
+    const feria = data[f];
+    const payload = {
+      fecha: f,
+      capturas: Object.entries(feria.capturas).map(([rut, c]) => {
+        const u = USUARIOS.find(x => x.rut === rut) || {};
+        return {
+          rut,
+          agricultor: u.apellidos ? (u.apellidos + ', ' + u.nombres) : '',
+          rubro: u.rubro || '',
+          monto: c.asistio ? c.monto : 0,
+          asistio: c.asistio
+        };
+      })
+    };
+    try {
+      const resp = await fetch(CONFIG.appsScriptUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+        redirect: 'follow'
+      });
+      const text = await resp.text();
+      let d;
+      try { d = JSON.parse(text); } catch(e) { d = { ok: false, error: text.substring(0,200) }; }
+      if (!d.ok) throw new Error(d.error || 'Respuesta inesperada del servidor');
+      feria.sincronizado = true;
+      feria.timestampSync = new Date().toISOString();
+      escribirStorage(data);
+      ok++;
+    } catch(err) {
+      fail++;
+      ultimoError = err.message || 'Error de red';
+    }
+  }
+  document.getElementById('sync-loading').classList.remove('show');
+  if (fail === 0) {
+    document.getElementById('sync-success').classList.add('show');
+    toast(ok + ' feria(s) sincronizada(s)');
+  } else {
+    document.getElementById('sync-error-msg').textContent =
+      ok + ' enviada(s), ' + fail + ' con error (' + ultimoError + ').';
+    document.getElementById('sync-error').classList.add('show');
+  }
+  document.getElementById('cierre-actions').style.display = 'grid';
+  verificarPendientes();
+  actualizarStats();
+}
+function importarRespaldo(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const json = JSON.parse(e.target.result);
+      const data = leerStorage();
+      let importadas = 0;
+      let ultimaFecha = null;
+      if (json.feria && json.feria.fecha) {
+        // Formato del respaldo descargado: { fecha, feria, usuarios }
+        data[json.feria.fecha] = json.feria;
+        ultimaFecha = json.feria.fecha;
+        importadas = 1;
+      } else if (json.fecha && json.capturas) {
+        // Un objeto feria suelto
+        data[json.fecha] = json;
+        ultimaFecha = json.fecha;
+        importadas = 1;
+      } else {
+        // Respaldo completo: { "2026-08-12": {feria...}, ... }
+        Object.keys(json).forEach(k => {
+          if (json[k] && json[k].capturas) { data[k] = json[k]; ultimaFecha = k; importadas++; }
+        });
+      }
+      if (!importadas) { toast('No se encontraron ferias en el archivo'); input.value = ''; return; }
+      escribirStorage(data);
+      estado.fechaActual = ultimaFecha;
+      document.getElementById('fecha-input').value = ultimaFecha;
+      document.getElementById('fecha-display').textContent = fmtFecha(ultimaFecha);
+      cerrarModalCierre();
+      renderLista();
+      actualizarStats();
+      verificarPendientes();
+      toast('Respaldo importado · feria del ' + fmtFecha(ultimaFecha));
+    } catch (err) {
+      toast('Archivo no válido: ' + (err.message || 'error de lectura'));
+    }
+    input.value = '';
+  };
+  reader.readAsText(file);
 }
 function descargarRespaldo() {
   const feria = getFeriaActual();

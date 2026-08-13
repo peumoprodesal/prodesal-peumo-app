@@ -155,6 +155,12 @@
   .lista-btn.copiar { background: var(--cream-deep); color: var(--ink); border: 1px solid var(--line); }
   .lista-btn.compartir { background: var(--olive-deep); color: var(--cream); }
   .lista-btn.cerrar { background: var(--white); color: var(--ink-soft); border: 1px solid var(--line); }
+  /* Histórico de ventas del agricultor */
+  .hist-box { background: var(--cream); border: 1px solid var(--line-soft); border-radius: 4px; padding: 10px 12px; margin: 8px 0 4px; max-height: 150px; overflow-y: auto; }
+  .hist-head { font-size: 11px; color: var(--ink-soft); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; font-weight: 600; }
+  .hist-row { display: flex; justify-content: space-between; font-size: 13px; padding: 3px 0; border-bottom: 1px solid var(--line-soft); }
+  .hist-row:last-child { border-bottom: none; }
+  .hist-row span:last-child { font-weight: 600; color: var(--olive-deep); font-variant-numeric: tabular-nums; }
 </style>
 </head>
 <body>
@@ -236,6 +242,7 @@
     <h3 id="capt-nombre">—</h3>
     <div class="rubro" id="capt-rubro">—</div>
     <div id="capt-estado-previo"></div>
+    <div id="capt-historico"></div>
     <div class="monto-display">
       <div class="label">Monto vendido hoy</div>
       <div class="value" id="capt-monto-display">$0</div>
@@ -307,11 +314,15 @@
 // CONFIG — editar URL del Apps Script tras desplegarlo
 // ============================================================
 const CONFIG = {
-  // La acción "feria" es el buzón que se agregó al Apps Script del INTEGRADO
-  // para recibir las ventas del Mercado Campesino (ver Code.gs, función writeFeria).
-  appsScriptUrl: "https://script.google.com/macros/s/AKfycbwY2JeA1eaJvHKKFA6w1t1Qd2AKiHnOlfbCc2VWHgOVluq1RpcAMNKuusLETndGAkIi8w/exec?action=feria",
+  // URL base del Apps Script (SIN ?action). La acción se agrega en cada llamada:
+  //   ?action=feria      -> escribir ventas (POST)
+  //   ?action=historico  -> leer la matriz Mercado Campesino (GET)
+  baseUrl: "https://script.google.com/macros/s/AKfycbwY2JeA1eaJvHKKFA6w1t1Qd2AKiHnOlfbCc2VWHgOVluq1RpcAMNKuusLETndGAkIi8w/exec",
   storageKey: "captura_mc_peumo_v1"
 };
+function urlAccion(a) { return CONFIG.baseUrl + '?action=' + a; }
+// Cache del histórico leído desde la matriz del INTEGRADO: { rut: {agricultor, rubro, total, ventas:[{fecha,monto}]} }
+let HISTORICO = {};
 const USUARIOS = [
   { rut:"7016854-5", apellidos:"AMARO ALFARO", nombres:"CLARA PILAR DEL CARMEN", rubro:"Fruta deshidratada" },
   { rut:"8293891-5", apellidos:"CERÓN GONZÁLEZ", nombres:"LEANDRA FILOMENA", rubro:"Hortalizas" },
@@ -375,6 +386,35 @@ function init() {
   window.addEventListener('online', actualizarNet);
   window.addEventListener('offline', actualizarNet);
   actualizarNet();
+  cargarHistorico();
+}
+// === Histórico: leer la matriz "Mercado Campesino" del INTEGRADO ===
+function normalizarRut(r) { return (r || '').toString().trim().toUpperCase().replace(/\./g, '').replace(/\s/g, ''); }
+async function cargarHistorico() {
+  if (!CONFIG.baseUrl || CONFIG.baseUrl.startsWith("PEGAR")) return;
+  try {
+    const resp = await fetch(urlAccion('historico'), { method: 'GET', redirect: 'follow' });
+    const text = await resp.text();
+    const data = JSON.parse(text);
+    if (!data || !data.agricultores) return;
+    HISTORICO = {};
+    data.agricultores.forEach(a => { HISTORICO[normalizarRut(a.rut)] = a; });
+  } catch (e) {
+    // sin conexión o servidor sin la acción 'historico': el histórico simplemente no se muestra
+  }
+}
+function renderHistorico(rut) {
+  const cont = document.getElementById('capt-historico');
+  if (!cont) return;
+  const h = HISTORICO[normalizarRut(rut)];
+  if (!h || !h.ventas || !h.ventas.length) { cont.innerHTML = ''; return; }
+  const ventas = h.ventas.slice().sort((a, b) => (a.fecha < b.fecha ? 1 : -1)); // más recientes primero
+  let filas = ventas.map(v => '<div class="hist-row"><span>' + v.fecha + '</span><span>' + CLP(v.monto) + '</span></div>').join('');
+  cont.innerHTML =
+    '<div class="hist-box">' +
+      '<div class="hist-head">Ventas en ferias anteriores · total ' + CLP(h.total || 0) + '</div>' +
+      filas +
+    '</div>';
 }
 function actualizarNet() {
   const el = document.getElementById('net-status');
@@ -562,6 +602,7 @@ function abrirCaptura(rut) {
   if (conf === 'si') tagHtml = '<span class="estado-previo-tag si"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>Confirmó asistencia el día previo</span>';
   else if (conf === 'no') tagHtml = '<span class="estado-previo-tag no"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>Avisó que no venía</span>';
   document.getElementById('capt-estado-previo').innerHTML = tagHtml;
+  renderHistorico(rut);
   const c = feria.capturas[rut];
   const valor = c && c.asistio ? c.monto : '';
   document.getElementById('capt-input').value = valor;
@@ -646,10 +687,10 @@ async function sincronizar() {
     })
   };
   try {
-    if (!CONFIG.appsScriptUrl || CONFIG.appsScriptUrl.startsWith("PEGAR")) {
-      throw new Error('URL de Apps Script no configurada. Edita CONFIG.appsScriptUrl en el archivo.');
+    if (!CONFIG.baseUrl || CONFIG.baseUrl.startsWith("PEGAR")) {
+      throw new Error('URL de Apps Script no configurada. Edita CONFIG.baseUrl en el archivo.');
     }
-    const resp = await fetch(CONFIG.appsScriptUrl, {
+    const resp = await fetch(urlAccion('feria'), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8' },
       body: JSON.stringify(payload),
@@ -714,7 +755,7 @@ async function sincronizarPendientes() {
       })
     };
     try {
-      const resp = await fetch(CONFIG.appsScriptUrl, {
+      const resp = await fetch(urlAccion('feria'), {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
         body: JSON.stringify(payload),

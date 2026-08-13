@@ -161,7 +161,7 @@ let reu=LD('reu')||[];
 
 // State
 let tab=cfg.nombre?'nom':'cfg'; // Si no hay config, mostrar config primero
-let sq='',ftec='',ffm='',sel=null,ev=null,sfv=false;
+let sq='',ftec='',ffm='',ffe='',sel=null,ev=null,sfv=false;
 
 // Utils
 const wk=d=>{const t=new Date(d);t.setHours(0,0,0,0);t.setDate(t.getDate()+3-(t.getDay()+6)%7);const w=new Date(t.getFullYear(),0,4);return 1+Math.round(((t-w)/864e5-3+(w.getDay()+6)%7)/7)};
@@ -185,6 +185,8 @@ function filterNom(){
     if(q&&!s.includes(q))show=false;
     if(ftec&&t!==ftec)show=false;
     if(ffm&&f!==ffm)show=false;
+    if(ffe==='si'&&!u.encuesta_2026)show=false;
+    if(ffe==='no'&&u.encuesta_2026)show=false;
     c.style.display=show?'':'none';
     if(show)shown++;
   });
@@ -193,6 +195,7 @@ function filterNom(){
   // Update chip active states
   document.querySelectorAll('.chtec').forEach(c=>{c.classList.toggle('on',c.dataset.v===(ftec||'_all'))});
   document.querySelectorAll('.chfm').forEach(c=>{c.classList.toggle('on',c.dataset.v===(ffm||'_all'))});
+  document.querySelectorAll('.chenc').forEach(c=>{c.classList.toggle('on',c.dataset.v===(ffe||'_all'))});
 }
 
 // Tabs
@@ -345,7 +348,7 @@ function rNom(){
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="flex:1;min-width:0">
           <b style="font-size:13px">${h(nm)}</b>
-          ${u.n_ifp?`<span class="tg tg-b">${u.n_ifp} IFP</span>`:''}${u.n_riego?`<span class="tg" style="background:#e0f2fe;color:#0369a1">${u.n_riego} Riego</span>`:''}
+          ${u.n_ifp?`<span class="tg tg-b">${u.n_ifp} IFP</span>`:''}${u.n_riego?`<span class="tg" style="background:#e0f2fe;color:#0369a1">${u.n_riego} Riego</span>`:''}${u.encuesta_2026?`<span class="tg" style="background:#ecfdf5;color:#059669">📝</span>`:''}
           ${(u.pri&&u.pri.ESTADO)?'<span class="tg tg-p">PRI</span>':''}
           ${u.ceaf?'<span class="tg tg-o">CEAF</span>':''}
           <div class="mu" style="margin-top:2px">${u.rut||''} · ${u.rubro||''} · ${u.tecnico||''}${u.ibv?` · <b style="color:#0d9488">IBV ${fm(u.ibv)}</b>`:''}${u.tipificacion?` · <span style="color:#7c3aed;font-weight:600;font-size:10px">${h(u.tipificacion)}</span>`:''}</div>
@@ -372,6 +375,11 @@ function rNom(){
           return '<button class="ch chfm" data-v="' + v + '" onclick="ffm=\'' + v.replace(/'/g, "\\'") + '\';filterNom()">' + icon + ' ' + short + ' (' + siiVals[v] + ')</button>';
         }).join('');
       })()}
+    </div>
+    <div style="margin-bottom:6px;display:flex;flex-wrap:wrap;gap:3px">
+      <button class="ch chenc on" data-v="_all" onclick="ffe='';filterNom()">📝 Encuesta: Todos</button>
+      <button class="ch chenc" data-v="si" onclick="ffe='si';filterNom()">✅ Encuestados (${U.filter(u=>u.encuesta_2026).length})</button>
+      <button class="ch chenc" data-v="no" onclick="ffe='no';filterNom()">❌ Pendientes (${U.filter(u=>!u.encuesta_2026).length})</button>
     </div>
     <p class="mu mb" id="nomCnt">${U.length} agricultores</p>
     <p id="nominaStatus" style="font-size:0.75rem;color:#666;text-align:center;min-height:1.2em;cursor:pointer" onclick="cargarNomina()" title="Click para actualizar nómina desde Google Sheets"></p>
@@ -406,6 +414,7 @@ function rFicha(){
         <div><span class="mu" style="font-size:10px">💰 IBV Mensual</span><div style="font-weight:700;font-size:14px;color:${u.ibv?'#0d9488':'#94a3b8'}">${u.ibv?fm(u.ibv):'Sin dato'}</div></div>
         <div><span class="mu" style="font-size:10px">📊 SII</span><div style="font-weight:600;font-size:12px">${u.sii||'Sin dato'}</div></div>
         <div><span class="mu" style="font-size:10px">🏷️ Tipificación</span><div style="font-weight:600;font-size:12px;color:${u.tipificacion==='MP Transición'?'#d97706':'#7c3aed'}">${u.tipificacion||'Sin dato'}</div></div>
+        <div><span class="mu" style="font-size:10px">📝 Encuesta 2026</span><div style="font-weight:600;font-size:12px;color:${u.encuesta_2026?'#059669':'#dc2626'}">${u.encuesta_2026?'✅ Realizada ('+u.fecha_encuesta+')':'❌ Pendiente'}</div></div>
       </div>
       <div class="g2 mt">
         <div><span class="mu" style="font-size:10px">📍 Coordenadas GPS</span>
@@ -931,6 +940,38 @@ function rInf(){
         ${sectorRows.map(([s,c])=>'<tr style="'+(c===0?'background:#fef2f2':'')+'"><td style="padding:5px 8px;border-bottom:1px solid #f1f5f9;'+(c===0?'color:#dc2626;font-weight:600':'')+'">'+h(s)+(c===0?' ⚠️':'')+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;font-weight:600;'+(c===0?'color:#dc2626':'')+'">'+c+'</td><td style="padding:5px 8px;text-align:center;border-bottom:1px solid #f1f5f9;color:#6b7280">'+(totalVisitas?Math.round(c/totalVisitas*100):0)+'%</td></tr>').join('')}
         <tr style="background:#f8fafc;font-weight:700"><td style="padding:6px 8px;border-top:2px solid #e2e8f0">Total</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">${totalVisitas}</td><td style="padding:6px 8px;text-align:center;border-top:2px solid #e2e8f0">100%</td></tr>
       </table>
+    </div>
+    <div class="cd" style="border-color:#a78bfa;background:#f5f3ff">
+      <b style="font-size:13px;color:#7c3aed">📝 Avance Encuesta Caracterización 2026</b>
+      <p class="mu" style="margin:4px 0 8px">Sincronización automática diaria desde plataforma INDAP (KoboToolbox)</p>
+      ${(()=>{
+        const enc=U.filter(u=>u.encuesta_2026).length;
+        const pend=U.length-enc;
+        const pct=U.length?Math.round(enc/U.length*100):0;
+        const byTec={};
+        U.forEach(u=>{
+          const t=u.tecnico||'SIN ASIGNAR';
+          if(!byTec[t])byTec[t]={total:0,enc:0};
+          byTec[t].total++;
+          if(u.encuesta_2026)byTec[t].enc++;
+        });
+        return '<div style="display:flex;gap:8px;margin-bottom:8px">'+
+          '<div style="flex:1;text-align:center;background:#fff;border-radius:8px;padding:8px"><div style="font-size:20px;font-weight:800;color:#7c3aed">'+enc+'/'+U.length+'</div><div class="mu">Encuestados</div></div>'+
+          '<div style="flex:1;text-align:center;background:#fff;border-radius:8px;padding:8px"><div style="font-size:20px;font-weight:800;color:'+( pct>=100?'#059669':'#dc2626')+'">'+pct+'%</div><div class="mu">Avance</div></div>'+
+          '<div style="flex:1;text-align:center;background:#fff;border-radius:8px;padding:8px"><div style="font-size:20px;font-weight:800;color:#dc2626">'+pend+'</div><div class="mu">Pendientes</div></div>'+
+          '</div>'+
+          '<div style="background:#e5e7eb;border-radius:4px;height:8px;margin-bottom:10px;overflow:hidden"><div style="background:#7c3aed;height:100%;width:'+pct+'%;border-radius:4px"></div></div>'+
+          Object.keys(byTec).sort().map(t=>{
+            const d=byTec[t];
+            const tp=d.total?Math.round(d.enc/d.total*100):0;
+            return '<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 0;border-bottom:1px solid #e5e7eb">'+
+              '<b style="font-size:11px">'+h(t)+'</b>'+
+              '<div style="display:flex;align-items:center;gap:6px">'+
+              '<div style="background:#e5e7eb;border-radius:4px;height:6px;width:60px;overflow:hidden"><div style="background:#7c3aed;height:100%;width:'+tp+'%"></div></div>'+
+              '<span class="mu" style="min-width:60px;text-align:right">'+d.enc+'/'+d.total+' ('+tp+'%)</span>'+
+              '</div></div>';
+          }).join('');
+      })()}
     </div>
     <div class="cd" style="border-color:#10b981;background:#ecfdf5">
       <b style="font-size:13px;color:#059669">📋 Cuadro de Cobertura por Agricultor</b>

@@ -160,8 +160,9 @@ let cfg=LD('cfg')||{nombre:'',abr:'',cargo:'',coord:'Juan Miranda Tobar',cCoord:
 let vis=LD('vis')||[];
 lastSync=LD('lastSync')||'';
 let reu=LD('reu')||[];
-let actData=LD('actData')||{}; // {semXX_2026:{reuniones:'',giras:'',operativos:'',articulacion:'',otras:'',resumen:''},mesXX_2026:{...}}
-let actFotos={}; // {semXX_2026:{reuniones:[{name,data}],giras:[...],...}} — in memory only (too large for localStorage)
+let actData=LD('actData')||{}; // {semXX_2026:{reuniones:[{fecha,lugar,texto}],...,resumen:''},mesXX_2026:{resumen:''}}
+let actFotos={}; // {semXX_2026:{reuniones:[{name,data}],...}} — solo en memoria (2 o 4 fotos por sección)
+const MAX_FOTOS=4;
 
 // Secciones de actividades del informe
 const ACT_SECCIONES=[
@@ -178,46 +179,69 @@ function getActKey(periodo){
 }
 function saveActs(){SV('actData',actData)}
 function getActs(key){return actData[key]||{}}
-function setAct(key,seccion,texto){if(!actData[key])actData[key]={};actData[key][seccion]=texto;saveActs()}
+// Lista de actividades de una sección (migra el formato antiguo de texto plano)
+function getActList(key,seccion){
+  const d=actData[key]||{};let v=d[seccion];
+  if(typeof v==='string'){v=v.trim()?[{fecha:'',lugar:'',texto:v}]:[];if(!actData[key])actData[key]={};actData[key][seccion]=v;saveActs()}
+  return Array.isArray(v)?v:[];
+}
+function setAct(key,seccion,texto){if(!actData[key])actData[key]={};actData[key][seccion]=texto;saveActs()} // resumen mensual
+function addActividad(key,seccion){
+  if(!actData[key])actData[key]={};
+  const l=getActList(key,seccion);l.push({fecha:'',lugar:'',texto:''});actData[key][seccion]=l;saveActs();R();
+}
+function rmActividad(key,seccion,i){
+  const l=getActList(key,seccion);if(l[i]&&l[i].texto&&!confirm('¿Eliminar esta actividad?'))return;
+  l.splice(i,1);actData[key][seccion]=l;saveActs();R();
+}
+function setActField(key,seccion,i,campo,val){
+  const l=getActList(key,seccion);if(!l[i])return;l[i][campo]=val;actData[key][seccion]=l;saveActs();
+}
+// Fotos: máximo 4 por sección; el informe usa siempre un número par (2 o 4)
 function addFoto(key,seccion,file){
   if(!actFotos[key])actFotos[key]={};
   if(!actFotos[key][seccion])actFotos[key][seccion]=[];
+  if(actFotos[key][seccion].length>=MAX_FOTOS){nf('⚠️ Máximo '+MAX_FOTOS+' fotos por sección');return}
   const reader=new FileReader();
   reader.onload=e=>{
-    actFotos[key][seccion].push({name:file.name,data:e.target.result});
+    const lista=actFotos[key][seccion];if(lista.length>=MAX_FOTOS)return;
+    const foto={name:file.name,data:e.target.result,w:4,h:3};
+    const im=new Image();im.onload=()=>{foto.w=im.naturalWidth||4;foto.h=im.naturalHeight||3};im.src=foto.data;
+    lista.push(foto);
     renderFotoPreview(key,seccion);
-    nf('📷 Foto agregada: '+file.name);
+    if(lista.length%2) nf('📷 '+lista.length+' foto(s). El informe usa 2 o 4 por sección: agrega una más');
+    else nf('📷 '+lista.length+' fotos listas');
   };
   reader.readAsDataURL(file);
 }
+function fotosPares(key,seccion){const f=(actFotos[key]&&actFotos[key][seccion])||[];return f.slice(0,f.length>=4?4:f.length>=2?2:0)}
 function renderFotoPreview(key,seccion){
   const container=document.getElementById('fp_'+seccion);
   if(!container)return;
   const fotos=(actFotos[key]&&actFotos[key][seccion])||[];
-  container.innerHTML=fotos.map((f,i)=>'<div style="display:inline-block;position:relative;margin:4px"><img src="'+f.data+'" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #d1d5db"><button onclick="rmFoto(\''+key+'\',\''+seccion+'\','+i+')" style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;line-height:16px">×</button></div>').join('');
+  container.innerHTML=fotos.map((f,i)=>'<div style="display:inline-block;position:relative;margin:4px"><img src="'+f.data+'" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #d1d5db"><button onclick="rmFoto(\''+key+'\',\''+seccion+'\','+i+')" style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;line-height:16px">×</button></div>').join('')
+    +(fotos.length%2?'<span style="font-size:10px;color:#b45309;margin-left:6px">Se requieren 2 o 4 fotos (hay '+fotos.length+')</span>':'')
+    +(fotos.length>=MAX_FOTOS?'<span style="font-size:10px;color:#6b7280;margin-left:6px">Máximo alcanzado</span>':'');
 }
 function rmFoto(key,seccion,idx){
   if(actFotos[key]&&actFotos[key][seccion]){actFotos[key][seccion].splice(idx,1);renderFotoPreview(key,seccion)}
 }
 
-// Web Speech API — dictado por voz
+// Web Speech API — dictado por voz (por actividad)
 let recActive=null;
-function toggleVoz(seccion,key){
+function toggleVoz(id,key,seccion,i){
   const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
   if(!SR){nf('⚠️ Tu navegador no soporta dictado por voz');return}
-  const btn=document.getElementById('vbtn_'+seccion);
-  if(recActive&&recActive._seccion===seccion){recActive.stop();recActive=null;if(btn)btn.textContent='🎙️';return}
-  if(recActive){recActive.stop();const oldBtn=document.getElementById('vbtn_'+recActive._seccion);if(oldBtn)oldBtn.textContent='🎙️'}
-  const rec=new SR();rec.lang='es-CL';rec.continuous=true;rec.interimResults=true;rec._seccion=seccion;
-  const ta=document.getElementById('ta_'+seccion);
+  const btn=document.getElementById('vbtn_'+id);
+  if(recActive&&recActive._id===id){recActive.stop();recActive=null;if(btn)btn.textContent='🎙️';return}
+  if(recActive){recActive.stop();const ob=document.getElementById('vbtn_'+recActive._id);if(ob)ob.textContent='🎙️'}
+  const rec=new SR();rec.lang='es-CL';rec.continuous=true;rec.interimResults=true;rec._id=id;
+  const ta=document.getElementById('ta_'+id);
   let finalT=ta?ta.value:'';
   rec.onresult=e=>{
-    let interim='',final='';
-    for(let i=e.resultIndex;i<e.results.length;i++){
-      if(e.results[i].isFinal)final+=e.results[i][0].transcript;
-      else interim+=e.results[i][0].transcript;
-    }
-    if(final&&ta){finalT+=(finalT?' ':'')+final;ta.value=finalT;setAct(key,seccion,finalT)}
+    let final='';
+    for(let k=e.resultIndex;k<e.results.length;k++) if(e.results[k].isFinal)final+=e.results[k][0].transcript;
+    if(final&&ta){finalT+=(finalT?' ':'')+final;ta.value=finalT;setActField(key,seccion,i,'texto',finalT)}
   };
   rec.onerror=e=>{nf('⚠️ Error de voz: '+e.error);if(btn)btn.textContent='🎙️';recActive=null};
   rec.onend=()=>{if(btn)btn.textContent='🎙️';recActive=null};
@@ -226,10 +250,37 @@ function toggleVoz(seccion,key){
   nf('🎙️ Dictando... habla ahora');
 }
 
+// Redacción profesional con Claude (corrige el dictado y lo pone en tono institucional)
+async function mejorarTexto(id,key,seccion,i){
+  if(!cfg.apiKey){nf('⚠️ Configura la API key en ⚙️ Config para usar la redacción asistida');return}
+  const ta=document.getElementById('ta_'+id);const l=getActList(key,seccion);const a=l[i];
+  if(!ta||!a||!ta.value.trim()){nf('⚠️ Escribe o dicta primero una descripción');return}
+  const btn=document.getElementById('mbtn_'+id);if(btn){btn.disabled=true;btn.textContent='⏳'}
+  const sec=ACT_SECCIONES.find(x=>x.key===seccion);
+  const fechaTxt=a.fecha?new Date(a.fecha+'T12:00:00').toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'';
+  const prompt='Eres el asesor profesional del programa PRODESAL Peumo (INDAP, Chile) y redactas informes institucionales para el municipio e INDAP.\n'
+    +'Reescribe la siguiente nota de terreno como un párrafo (máximo dos) para la sección «'+(sec?sec.label:seccion)+'» de un informe de actividades.\n'
+    +'Reglas: tono técnico, formal e impersonal en tercera persona ("Se realizó…", "El equipo técnico…"); corrige errores de transcripción de voz, nombres y términos agrícolas; conserva TODOS los datos concretos (personas, cifras, cultivos, lugares, acuerdos) y no inventes ninguno; sin viñetas, sin títulos, sin comillas, sin frases de relleno ni conclusiones genéricas; redacción natural, como la escribiría un profesional chileno con experiencia, no como un texto generado.\n'
+    +(a.lugar?'Lugar: '+a.lugar+'\n':'')+(fechaTxt?'Fecha: '+fechaTxt+'\n':'')
+    +'\nNota original:\n'+ta.value.trim()+'\n\nEntrega únicamente el texto final.';
+  try{
+    const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
+      headers:{'Content-Type':'application/json','x-api-key':cfg.apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},
+      body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:600,messages:[{role:'user',content:prompt}]})});
+    const j=await r.json();
+    const txt=(j.content&&j.content[0]&&j.content[0].text||'').trim();
+    if(!txt)throw new Error(j.error?.message||'Respuesta vacía');
+    a.original=a.original||ta.value;ta.value=txt;setActField(key,seccion,i,'texto',txt);
+    nf('✨ Descripción mejorada (puedes editarla)');
+  }catch(e){nf('⚠️ No se pudo mejorar: '+e.message)}
+  if(btn){btn.disabled=false;btn.textContent='✨'}
+}
+
 // State
 let tab=cfg.nombre?'nom':'cfg'; // Si no hay config, mostrar config primero
 let sq='',ftec='',ffm='',ffe='',sel=null,ev=null,sfv=false;
 let gsSel=null,gmSel=null; // semana/mes seleccionados en Informes
+const gmSel_=()=>gmSel!=null?gmSel:new Date().getMonth();
 
 // Utils
 const wk=d=>{const t=new Date(d);t.setHours(0,0,0,0);t.setDate(t.getDate()+3-(t.getDay()+6)%7);const w=new Date(t.getFullYear(),0,4);return 1+Math.round(((t-w)/864e5-3+(w.getDay()+6)%7)/7)};
@@ -276,7 +327,7 @@ function R(){
   if(tab==='cfg')c.innerHTML=rCfg();
   else if(tab==='nom')c.innerHTML=sel?rFicha():rNom();
   else if(tab==='vis')c.innerHTML=sfv?rVF():rVL();
-  else{c.innerHTML=rInf();ACT_SECCIONES.forEach(x=>renderFotoPreview(getActKey('sem'),x.key))}
+  else{c.innerHTML=rInf();ACT_SECCIONES.forEach(x=>renderFotoPreview('sem'+(gsSel!=null?gsSel:wk(new Date()))+'_2026',x.key))}
 }
 
 // ========= CONFIG (simplificada) =========
@@ -942,8 +993,18 @@ function rInf(){
       </div>
       <div style="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:10px">
         <b style="font-size:12px">✏️ Actividades de la Semana</b>
-        <p class="mu" style="margin:4px 0 8px;font-size:11px">Describe las actividades realizadas. Puedes dictar por voz 🎙️ y adjuntar fotos 📷. El texto se guarda automáticamente; las fotos solo se mantienen hasta recargar la página, así que genera el informe en la misma sesión.</p>
-        ${ACT_SECCIONES.map(s=>{const ak='sem'+(document.getElementById('gs')?.value||wk(new Date()))+'_2026',val=h((actData[ak]&&actData[ak][s.key])||'');return '<div style="margin-top:8px;padding:6px;background:#f9fafb;border-radius:6px"><div style="display:flex;align-items:center;gap:6px"><b style="font-size:11px;flex:1;color:#374151">'+s.label+'</b><button id="vbtn_'+s.key+'" onclick="toggleVoz(\''+s.key+'\',getActKey(\'sem\'))" class="bt bt-s" style="padding:2px 8px;font-size:11px" title="Dictar por voz">🎙️</button></div><textarea id="ta_'+s.key+'" class="ip" style="width:100%;height:50px;margin-top:4px;font-size:11px;resize:vertical" placeholder="Describe '+s.label.toLowerCase()+'..." onchange="setAct(getActKey(\'sem\'),\''+s.key+'\',this.value)">'+val+'</textarea><div style="display:flex;align-items:center;gap:6px;margin-top:4px"><label class="bt bt-s bt-o" style="padding:2px 8px;font-size:11px;cursor:pointer">📷 Fotos<input type="file" accept="image/*" multiple hidden onchange="Array.from(this.files).forEach(f=>addFoto(getActKey(\'sem\'),\''+s.key+'\',f))"></label><div id="fp_'+s.key+'" style="display:flex;flex-wrap:wrap"></div></div></div>'}).join('')}
+        <p class="mu" style="margin:4px 0 8px;font-size:11px">Agrega cada actividad con su fecha y lugar. Dicta con 🎙️, pule la redacción con ✨ (usa tu API key) y adjunta 2 o 4 fotos por sección. El texto se guarda solo; las fotos duran hasta recargar la página.</p>
+        ${ACT_SECCIONES.map(s=>{const ak='sem'+sem+'_2026',lista=getActList(ak,s.key);const nF=((actFotos[ak]||{})[s.key]||[]).length;
+          const items=lista.map((a,i)=>{const id=s.key+'_'+i;return '<div style="border:1px solid #e5e7eb;border-radius:6px;padding:6px;margin-top:6px;background:#fff">'
+            +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><input type="date" class="ip" value="'+h(a.fecha||'')+'" style="width:140px;font-size:11px" onchange="setActField(\''+ak+'\',\''+s.key+'\','+i+',\'fecha\',this.value)">'
+            +'<input class="ip" value="'+h(a.lugar||'')+'" placeholder="Lugar (sector, predio, sede...)" style="flex:1;min-width:140px;font-size:11px" onchange="setActField(\''+ak+'\',\''+s.key+'\','+i+',\'lugar\',this.value)">'
+            +'<button id="vbtn_'+id+'" onclick="toggleVoz(\''+id+'\',\''+ak+'\',\''+s.key+'\','+i+')" class="bt bt-s" style="padding:2px 8px;font-size:11px" title="Dictar por voz">🎙️</button>'
+            +'<button id="mbtn_'+id+'" onclick="mejorarTexto(\''+id+'\',\''+ak+'\',\''+s.key+'\','+i+')" class="bt bt-s bt-g" style="padding:2px 8px;font-size:11px" title="Redactar en tono profesional">✨</button>'
+            +'<button onclick="rmActividad(\''+ak+'\',\''+s.key+'\','+i+')" class="bt bt-s" style="padding:2px 8px;font-size:11px;color:#ef4444" title="Eliminar">🗑️</button></div>'
+            +'<textarea id="ta_'+id+'" class="ip" style="width:100%;height:56px;margin-top:4px;font-size:11px;resize:vertical" placeholder="Describe la actividad (qué se hizo, con quién, resultados)..." onchange="setActField(\''+ak+'\',\''+s.key+'\','+i+',\'texto\',this.value)">'+h(a.texto||'')+'</textarea></div>'}).join('');
+          return '<div style="margin-top:8px;padding:6px;background:#f9fafb;border-radius:6px"><div style="display:flex;align-items:center;gap:6px"><b style="font-size:11px;flex:1;color:#374151">'+s.label+'</b><span class="mu" style="font-size:10px">'+lista.length+' act. · '+nF+' fotos</span><button onclick="addActividad(\''+ak+'\',\''+s.key+'\')" class="bt bt-s bt-b" style="padding:2px 8px;font-size:11px">+ Actividad</button></div>'
+            +items
+            +'<div style="display:flex;align-items:center;gap:6px;margin-top:6px;flex-wrap:wrap"><label class="bt bt-s bt-o" style="padding:2px 8px;font-size:11px;cursor:pointer">📷 Fotos (2 o 4)<input type="file" accept="image/*" multiple hidden onchange="Array.from(this.files).forEach(f=>addFoto(\''+ak+'\',\''+s.key+'\',f));this.value=\'\'"></label><div id="fp_'+s.key+'" style="display:flex;flex-wrap:wrap;align-items:center"></div></div></div>'}).join('')}
       </div>
     </div>
     <div class="cd">
@@ -963,7 +1024,7 @@ function rInf(){
       <div style="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:10px">
         <b style="font-size:12px">📋 Resumen Ejecutivo Mensual</b>
         <p class="mu" style="margin:4px 0 8px;font-size:11px">Resumen general del mes. Las actividades semanales se compilan automáticamente.</p>
-        <textarea id="ta_resumen_mes" class="ip" style="width:100%;height:70px;font-size:11px;resize:vertical" placeholder="Resumen ejecutivo del mes (objetivos cumplidos, logros destacados, observaciones generales)..." onchange="setAct(getActKey('mes'),'resumen',this.value)">${(()=>{const ak='mes'+(document.getElementById('gm')?.value||new Date().getMonth())+'_2026';return h((actData[ak]&&actData[ak].resumen)||'')})()}</textarea>
+        <textarea id="ta_resumen_mes" class="ip" style="width:100%;height:70px;font-size:11px;resize:vertical" placeholder="Resumen ejecutivo del mes (objetivos cumplidos, logros destacados, observaciones generales)..." onchange="setAct('mes'+gmSel_(),'resumen',this.value)">${h((actData['mes'+mi+'_2026']&&actData['mes'+mi+'_2026'].resumen)||'')}</textarea>
         <p class="mu" style="margin:8px 0 4px;font-size:10px">💡 El informe mensual incluirá las actividades de las semanas del mes seleccionado</p>
       </div>
     </div>
@@ -1223,267 +1284,183 @@ function getFilteredVis(periodo,formato){
   return {vf,tit,fn,asesorNombre,asesorCargo,asesorSel,periodo};
 }
 
-// Actividades del período: semanal = tal cual; mensual = compila todas las semanas del mes
-function getActsCompiled(periodo){
-  const actKey=getActKey(periodo);
-  const base=getActs(actKey);
-  if(periodo!=='mes') return {acts:base,fotos:actFotos[actKey]||{}};
-  const m=+(document.getElementById('gm')?.value||new Date().getMonth());
-  const semanas=new Set();
-  for(let d=new Date(2026,m,1);d.getMonth()===m;d.setDate(d.getDate()+1)) if(d.getDay()>=1&&d.getDay()<=5) semanas.add(wk(d));
-  const comp={},compF={};
-  [...semanas].sort((a,b)=>a-b).forEach(s=>{
-    const k='sem'+s+'_2026',a=actData[k]||{},f=actFotos[k]||{};
-    ACT_SECCIONES.forEach(sec=>{
-      if(a[sec.key]&&a[sec.key].trim()) comp[sec.key]=(comp[sec.key]?comp[sec.key]+'\n\n':'')+'SEMANA '+s+': '+a[sec.key].trim();
-      if(f[sec.key]&&f[sec.key].length) compF[sec.key]=(compF[sec.key]||[]).concat(f[sec.key]);
-    });
-  });
-  return {acts:{...comp,resumen:base.resumen||''},fotos:compF};
+// Rango lunes–viernes de una semana ISO
+function weekRange(w,year=2026){const j4=new Date(year,0,4);const mon=new Date(j4);mon.setDate(j4.getDate()-((j4.getDay()+6)%7)+(w-1)*7);const fri=new Date(mon);fri.setDate(mon.getDate()+4);return {ini:mon,fin:fri}}
+const fmtLargo=d=>{if(!d)return '';const x=typeof d==='string'?new Date(d+'T12:00:00'):d;const t=x.toLocaleDateString('es-CL',{weekday:'long',day:'numeric',month:'long',year:'numeric'});return t.charAt(0).toUpperCase()+t.slice(1)};
+const fmtCorto=d=>{if(!d)return '';const x=typeof d==='string'?new Date(d+'T12:00:00'):d;return x.toLocaleDateString('es-CL',{day:'numeric',month:'long'})};
+// Texto del período: "22 al 26 de septiembre de 2026" / "Septiembre de 2026"
+function periodoTexto(periodo){
+  if(periodo==='sem'){const w=+document.getElementById('gs').value;const {ini,fin}=weekRange(w);
+    const mi=ini.toLocaleDateString('es-CL',{month:'long'}),mf=fin.toLocaleDateString('es-CL',{month:'long'});
+    return (mi===mf?ini.getDate()+' al '+fin.getDate()+' de '+mf:ini.getDate()+' de '+mi+' al '+fin.getDate()+' de '+mf)+' de '+fin.getFullYear()}
+  const m=+document.getElementById('gm').value;return MESES[m].charAt(0).toUpperCase()+MESES[m].slice(1)+' de 2026';
 }
 
-async function gI(periodo,formato){
-  const {vf,tit,fn,asesorNombre,asesorCargo}=getFilteredVis(periodo,formato);
-  const ab=cfg.abr||abv(cfg.nombre);
-  const vt=vf.filter(v=>v.tipo==='Visita Técnica'||!v.tipo);
-  const {acts,fotos}=getActsCompiled(periodo);
+// Actividades del período: semanal = tal cual; mensual = compila todas las semanas del mes
+// Devuelve acts[seccion] = [{fecha,lugar,texto,semana}], fotos[seccion] (2 o 4), resumen
+function getActsCompiled(periodo){
+  const base=getActs(getActKey(periodo));
+  const out={},fotos={};
+  const semanas=[];
+  if(periodo==='sem') semanas.push(+document.getElementById('gs').value);
+  else{const m=+(document.getElementById('gm')?.value||new Date().getMonth());const st=new Set();
+    for(let d=new Date(2026,m,1);d.getMonth()===m;d.setDate(d.getDate()+1)) if(d.getDay()>=1&&d.getDay()<=5) st.add(wk(d));
+    semanas.push(...[...st].sort((a,b)=>a-b))}
+  semanas.forEach(w=>{const k='sem'+w+'_2026';
+    ACT_SECCIONES.forEach(sec=>{
+      const l=getActList(k,sec.key).filter(a=>(a.texto||'').trim());
+      if(l.length) out[sec.key]=(out[sec.key]||[]).concat(l.map(a=>({...a,semana:w})));
+      const f=fotosPares(k,sec.key);if(f.length) fotos[sec.key]=(fotos[sec.key]||[]).concat(f).slice(0,4);
+    })});
+  Object.keys(fotos).forEach(k=>{if(fotos[k].length%2)fotos[k]=fotos[k].slice(0,fotos[k].length-1)});
+  return {acts:out,fotos,resumen:(base.resumen||'').trim()};
+}
+// Texto plano de una actividad para la planilla
+const actLinea=a=>((a.fecha?fmtCorto(a.fecha):'')+(a.lugar?(a.fecha?' · ':'')+a.lugar:''))+(a.fecha||a.lugar?': ':'')+(a.texto||'').trim();
 
-  // Verificar que docx.js esté cargado
+async function gI(periodo,formato){
+  const {vf,fn,asesorNombre,asesorCargo}=getFilteredVis(periodo,formato);
+  const ab=cfg.abr||abv(cfg.nombre);
+  const vt=vf.filter(v=>v.tipo==='Visita Técnica'||!v.tipo).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+  const {acts,fotos,resumen}=getActsCompiled(periodo);
   if(typeof docx==='undefined'){nf('⚠️ Cargando librería docx...');return}
 
   const D=docx;
+  const NAVY='1F3864',BLUE='2E75B6',GRAY='595959',LIGHT='F2F5F9',LINE='BFC7D1';
+  const F='Calibri';
   const b64u=url=>{const b=atob((url||'').split(',')[1]||url);const a=new Uint8Array(b.length);for(let i=0;i<b.length;i++)a[i]=b.charCodeAt(i);return a};
   const imgType=url=>/^data:image\/png/i.test(url||'')?'png':/^data:image\/gif/i.test(url||'')?'gif':'jpg';
   const img=(url,w,h)=>new D.ImageRun({data:b64u(url),transformation:{width:w,height:h},type:imgType(url)});
 
-  // Helpers compactos
-  const vr=(text,o={})=>new D.TextRun({text:text||'',font:'Verdana',size:17,...o}); // 8.5pt=17 half-points
-  const brd={style:D.BorderStyle.SINGLE,size:1,color:'999999'};
-  const brds={top:brd,bottom:brd,left:brd,right:brd};
-  const noBrd={style:D.BorderStyle.NONE,size:0,color:'FFFFFF'};
-  const noBrds={top:noBrd,bottom:noBrd,left:noBrd,right:noBrd};
+  const run=(text,o={})=>new D.TextRun({text:text||'',font:F,size:20,color:'262626',...o}); // 10pt
+  const par=(runs,o={})=>new D.Paragraph({children:Array.isArray(runs)?runs:[runs],spacing:{before:0,after:120,line:276},...o});
+  const none={style:D.BorderStyle.NONE,size:0,color:'FFFFFF'};
+  const noB={top:none,bottom:none,left:none,right:none};
+  const cell=(children,o={})=>new D.TableCell({children:Array.isArray(children)?children:[children],borders:noB,verticalAlign:D.VerticalAlign.CENTER,margins:{top:60,bottom:60,left:100,right:100},...o});
+  const W=9900; // ancho útil (dxa)
 
-  const tc=(children,o={})=>new D.TableCell({
-    children:Array.isArray(children)?children:[children],
-    borders:brds,verticalAlign:D.VerticalAlign.CENTER,...o
-  });
+  // Título de sección numerado con línea inferior
+  let nSec=0;
+  const secTitle=t=>{nSec++;return par([run(String(nSec).padStart(2,'0')+'  ',{bold:true,size:24,color:BLUE}),run(t.toUpperCase(),{bold:true,size:22,color:NAVY,characterSpacing:20})],
+    {spacing:{before:320,after:160},keepNext:true,border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:BLUE,space:4}}})};
+  const meta=(t)=>par(run(t.toUpperCase(),{size:16,color:GRAY,bold:true,characterSpacing:15}),{spacing:{before:60,after:60},keepNext:true});
+  const texto=(t,o={})=>par(run(t),{alignment:D.AlignmentType.JUSTIFIED,...o});
+  const vacio=t=>par(run(t,{italics:true,color:GRAY,size:18}),{spacing:{after:120}});
 
-  const pr=(runs,o={})=>new D.Paragraph({
-    children:Array.isArray(runs)?runs:[runs],
-    spacing:{before:40,after:40},...o
-  });
+  // ---------- Portada / ficha ----------
+  const esSem=periodo==='sem';
+  const w=esSem?+document.getElementById('gs').value:null;
+  const m=esSem?null:+document.getElementById('gm').value;
+  const tituloGrande=esSem?'Semana '+w+' · 2026':MESES[m].charAt(0).toUpperCase()+MESES[m].slice(1)+' · 2026';
+  const body=[
+    par(run('INFORME '+(esSem?'SEMANAL':'MENSUAL')+' DE ACTIVIDADES',{bold:true,size:18,color:BLUE,characterSpacing:40}),{spacing:{before:120,after:40}}),
+    par(run(tituloGrande,{bold:true,size:44,color:NAVY}),{spacing:{after:40}}),
+    par(run('Programa PRODESAL Peumo  ·  Ilustre Municipalidad de Peumo  ·  INDAP',{size:18,color:GRAY}),{spacing:{after:240}}),
+  ];
+  const ficha=[['Profesional',asesorNombre],['Cargo',asesorCargo],['Unidad operativa',cfg.unidad||'PRODESAL Peumo'],['Período',periodoTexto(periodo)],['Visitas técnicas',String(vt.length)]];
+  const nAct=Object.values(acts).reduce((n,l)=>n+l.length,0);
+  ficha.push(['Actividades registradas',String(nAct)]);
+  body.push(new D.Table({width:{size:W,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,
+    rows:ficha.map(([k,v])=>new D.TableRow({children:[
+      cell(par(run(k.toUpperCase(),{size:16,bold:true,color:GRAY,characterSpacing:15}),{spacing:{after:0}}),{width:{size:2900,type:D.WidthType.DXA},shading:{fill:LIGHT,type:D.ShadingType.CLEAR},borders:{...noB,bottom:{style:D.BorderStyle.SINGLE,size:4,color:'FFFFFF'}}}),
+      cell(par(run(v,{size:20,color:NAVY}),{spacing:{after:0}}),{width:{size:W-2900,type:D.WidthType.DXA},borders:{...noB,bottom:{style:D.BorderStyle.SINGLE,size:4,color:LINE}}})
+    ]}))}));
 
-  // --- Logos como ImageRun ---
-  let logoIndap,logoPeumo;
-  try{logoIndap=img(LOGO_INDAP,130,65)}catch(e){logoIndap=null}
-  try{logoPeumo=img(LOGO_PEUMO,190,36)}catch(e){logoPeumo=null}
+  // ---------- Resumen ejecutivo (mensual) ----------
+  if(!esSem&&resumen){body.push(secTitle('Resumen ejecutivo'));resumen.split(/\n+/).filter(l=>l.trim()).forEach(l=>body.push(texto(l)))}
 
-  // --- Tabla de visitas ---
-  const colW=[1450,1300,3255,1700,1300,1200];
-  const colH=['FECHA','RUT','AGRICULTOR','TIPO','ASESOR','FOLIO'];
-  const visitHeaderRow=new D.TableRow({
-    children:colH.map((t,i)=>tc(pr(vr(t,{bold:true,size:16}),{alignment:D.AlignmentType.CENTER}),{
-      shading:{fill:'D6E4F0',type:D.ShadingType.CLEAR},width:{size:colW[i],type:D.WidthType.DXA}
-    }))
-  });
-  const visitDataRows=vt.map(v=>{
-    const d=v.fecha?new Date(v.fecha+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long'}).toUpperCase():'';
-    const vals=[d,v.rut||'',(v.agricultor||'').toUpperCase(),'ASESORIA TECNICA',v.asesor||ab,v.folio||''];
-    return new D.TableRow({children:vals.map((t,i)=>tc(pr(vr(t)),{width:{size:colW[i],type:D.WidthType.DXA}}))});
-  });
-
-  const visitTable=new D.Table({
-    rows:[visitHeaderRow,...visitDataRows],
-    width:{size:10205,type:D.WidthType.DXA},
-    layout:D.TableLayoutType.FIXED
-  });
-
-  // --- Observaciones técnicas ---
-  const obsParas=vt.filter(v=>v.observacion).flatMap(v=>{
-    const d=v.fecha?new Date(v.fecha+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long'}):'';
-    return [pr([vr((v.agricultor||'')+' ('+d+'): ',{bold:true}),vr(v.observacion||'')],{spacing:{before:60,after:60}})];
-  });
-
-  // --- Secciones de actividades ---
-  const actSectionRows=ACT_SECCIONES.flatMap(s=>{
-    const texto=acts[s.key]||'';
-    const secFotos=(fotos[s.key])||[];
-    const contentChildren=[];
-
-    if(texto){
-      texto.split(/\n+/).filter(l=>l.trim()).forEach(line=>{
-        const mS=line.match(/^(SEMANA \d+): ([\s\S]*)$/);
-        contentChildren.push(pr(mS?[vr(mS[1]+': ',{bold:true}),vr(mS[2])]:vr(line),{alignment:D.AlignmentType.JUSTIFIED,spacing:{before:60,after:60}}));
-      });
+  // ---------- Visitas técnicas ----------
+  body.push(secTitle('Visitas técnicas'));
+  body.push(texto('En el marco de la estructura definida por INDAP, las visitas del '+asesorCargo.toLowerCase()+' tienen como propósito la evaluación en terreno, la entrega de información al usuario y la validación de rendiciones o avances de proyectos. Durante el período se realizaron '+vt.length+' visita'+(vt.length===1?'':'s')+' técnica'+(vt.length===1?'':'s')+'.'));
+  if(vt.length){
+    const cw=[1500,1400,3600,1500,1000,900];
+    const hd=['Fecha','RUT','Agricultor/a','Tipo','Asesor','Folio'];
+    const rows=[new D.TableRow({tableHeader:true,children:hd.map((t,i)=>cell(par(run(t.toUpperCase(),{bold:true,size:16,color:'FFFFFF',characterSpacing:10}),{spacing:{after:0},alignment:i>=4?D.AlignmentType.CENTER:D.AlignmentType.LEFT}),{width:{size:cw[i],type:D.WidthType.DXA},shading:{fill:NAVY,type:D.ShadingType.CLEAR}}))})];
+    vt.forEach((v,r)=>{
+      const vals=[fmtCorto(v.fecha),v.rut||'',v.agricultor||'','Asesoría técnica',v.asesor||ab,v.folio||''];
+      rows.push(new D.TableRow({cantSplit:true,children:vals.map((t,i)=>cell(par(run(t,{size:18}),{spacing:{after:0},alignment:i>=4?D.AlignmentType.CENTER:D.AlignmentType.LEFT}),
+        {width:{size:cw[i],type:D.WidthType.DXA},shading:r%2?{fill:LIGHT,type:D.ShadingType.CLEAR}:undefined,borders:{...noB,bottom:{style:D.BorderStyle.SINGLE,size:4,color:LINE}}}))}));
+    });
+    body.push(new D.Table({rows,width:{size:W,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED}));
+    const obs=vt.filter(v=>(v.observacion||'').trim());
+    if(obs.length){
+      body.push(par(run('Observaciones técnicas',{bold:true,size:21,color:NAVY}),{spacing:{before:240,after:100},keepNext:true}));
+      obs.forEach(v=>{body.push(par([run((v.agricultor||'').trim(),{bold:true,color:NAVY}),run('  ·  '+fmtLargo(v.fecha),{size:16,color:GRAY})],{spacing:{after:20},keepNext:true}));body.push(texto(v.observacion.trim(),{spacing:{after:160}}))});
     }
+  }else body.push(vacio('Sin visitas técnicas registradas en el período.'));
 
-    // Fotos en tabla 2 columnas
-    if(secFotos.length>0){
-      const fotoRows=[];
-      for(let i=0;i<secFotos.length;i+=2){
-        const cells=[new D.TableCell({
-          children:[pr(img(secFotos[i].data,240,180),{alignment:D.AlignmentType.CENTER})],
-          borders:noBrds,width:{size:5102,type:D.WidthType.DXA}
-        })];
-        if(secFotos[i+1]){
-          cells.push(new D.TableCell({
-            children:[pr(img(secFotos[i+1].data,240,180),{alignment:D.AlignmentType.CENTER})],
-            borders:noBrds,width:{size:5103,type:D.WidthType.DXA}
-          }));
-        }else{
-          cells.push(new D.TableCell({children:[pr(vr(''))],borders:noBrds,width:{size:5103,type:D.WidthType.DXA}}));
-        }
-        fotoRows.push(new D.TableRow({children:cells}));
+  // ---------- Secciones de actividades ----------
+  ACT_SECCIONES.forEach(sec=>{
+    const lista=acts[sec.key]||[],fs=fotos[sec.key]||[];
+    body.push(secTitle(sec.label));
+    if(!lista.length&&!fs.length){body.push(vacio('Sin actividades registradas en el período.'));return}
+    lista.forEach(a=>{
+      const partes=[];if(a.fecha)partes.push(fmtLargo(a.fecha));if(a.lugar)partes.push(a.lugar.trim());if(!esSem&&a.semana)partes.push('Semana '+a.semana);
+      if(partes.length)body.push(meta(partes.join('   ·   ')));
+      a.texto.trim().split(/\n+/).filter(l=>l.trim()).forEach(l=>body.push(texto(l,{spacing:{after:160}})));
+    });
+    if(fs.length){
+      const cw=Math.floor((W-200)/2);const pxW=250;
+      const rows=[];
+      for(let i=0;i<fs.length;i+=2){
+        rows.push(new D.TableRow({cantSplit:true,children:[fs[i],fs[i+1]].map(f=>{
+          const ratio=(f.h||3)/(f.w||4);const boxH=190;const hh=Math.min(boxH,Math.round(pxW*ratio));const ww=Math.round(hh/ratio);
+          return cell(par(img(f.data,ww,hh),{alignment:D.AlignmentType.CENTER,spacing:{after:0}}),{width:{size:cw,type:D.WidthType.DXA},margins:{top:60,bottom:60,left:60,right:60}})})}));
       }
-      contentChildren.push(new D.Table({rows:fotoRows,width:{size:10205,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED}));
+      body.push(new D.Table({rows,width:{size:W,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,alignment:D.AlignmentType.CENTER}));
+      body.push(par(run('Registro fotográfico · '+sec.label,{size:16,italics:true,color:GRAY}),{alignment:D.AlignmentType.CENTER,spacing:{before:60,after:200}}));
     }
-
-    if(contentChildren.length===0){
-      contentChildren.push(pr(vr('[Insertar fotografías]',{italics:true,color:'999999'}),{alignment:D.AlignmentType.CENTER,spacing:{before:200,after:200}}));
-    }
-
-    return [
-      // Encabezado de sección (barra azul claro)
-      new D.TableRow({children:[tc(pr(vr(s.label+' (Adjuntar Fotografías)',{bold:true})),{columnSpan:2,shading:{fill:'DEEBF6',type:D.ShadingType.CLEAR}})]}),
-      // Contenido
-      new D.TableRow({children:[tc(contentChildren,{columnSpan:2})]})
-    ];
   });
 
-  // --- Construir cuerpo del documento ---
-  const bodyChildren=[];
+  // ---------- Firmas ----------
+  body.push(par(run(''),{spacing:{before:600}}));
+  const firma=(n,c,d)=>cell([par(run(''),{spacing:{before:700,after:0},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:NAVY,space:1}}}),
+      par(run(n.toUpperCase(),{bold:true,size:18,color:NAVY}),{alignment:D.AlignmentType.CENTER,spacing:{before:80,after:0}}),
+      par(run(c,{size:16,color:GRAY}),{alignment:D.AlignmentType.CENTER,spacing:{after:0}}),
+      par(run(d||'\u00a0',{size:16,color:GRAY}),{alignment:D.AlignmentType.CENTER,spacing:{after:0}})],
+    {width:{size:3300,type:D.WidthType.DXA},margins:{top:0,bottom:0,left:200,right:200},verticalAlign:D.VerticalAlign.BOTTOM});
+  body.push(new D.Table({width:{size:W,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,rows:[new D.TableRow({cantSplit:true,children:[
+    firma(asesorNombre,asesorCargo,'Programa PRODESAL Peumo'),
+    firma(cfg.coord||'',cfg.cCoord||'Coordinador Programa PRODESAL',''),
+    firma(cfg.contra||'',cfg.cContra||'Contraparte Entidad Ejecutora',cfg.depto||'')
+  ]})]}));
 
-  // Tabla principal (header + info + visitas + actividades)
-  const mainTableRows=[
-    // Título azul
-    new D.TableRow({children:[tc(pr(vr(tit,{bold:true,color:'FFFFFF',size:21}),{alignment:D.AlignmentType.CENTER}),{columnSpan:2,shading:{fill:'5B9BD5',type:D.ShadingType.CLEAR}})]}),
-    // Info rows
-    new D.TableRow({children:[
-      tc(pr(vr('Nombre',{bold:true})),{width:{size:5102,type:D.WidthType.DXA}}),
-      tc(pr(vr(asesorNombre)),{width:{size:5103,type:D.WidthType.DXA}})
-    ]}),
-    new D.TableRow({children:[
-      tc(pr(vr('Unidad Operativa',{bold:true}))),
-      tc(pr(vr(cfg.unidad||'PRODESAL Peumo')))
-    ]}),
-    new D.TableRow({children:[
-      tc(pr(vr('Nº de Visitas realizadas',{bold:true}))),
-      tc(pr(vr(String(vt.length).padStart(2,'0'))))
-    ]}),
-    // Separador azul
-    new D.TableRow({children:[tc(pr(vr('')),{columnSpan:2,shading:{fill:'DEEBF6',type:D.ShadingType.CLEAR}})]}),
-    // Resumen ejecutivo (solo mensual, si existe)
-    ...(periodo==='mes'&&acts.resumen?[
-      new D.TableRow({children:[tc(pr(vr('Resumen Ejecutivo',{bold:true})),{columnSpan:2,shading:{fill:'DEEBF6',type:D.ShadingType.CLEAR}})]}),
-      new D.TableRow({children:[tc(pr(vr(acts.resumen),{alignment:D.AlignmentType.JUSTIFIED,spacing:{before:80,after:80}}),{columnSpan:2})]})
-    ]:[]),
-    // Sección Visitas
-    new D.TableRow({children:[tc(pr(vr('Visitas',{bold:true})),{columnSpan:2,shading:{fill:'DEEBF6',type:D.ShadingType.CLEAR}})]}),
-    // Contenido de visitas
-    new D.TableRow({children:[tc([
-      pr(vr('En cuanto a la estructura definida por INDAP, las visitas del '+asesorCargo.toLowerCase()+' del programa tienen como propósito la evaluación, entrega de información al usuario y validación de rendiciones o avances de proyectos.'),{spacing:{before:80,after:120}}),
-      pr(vr('VISITAS TÉCNICAS',{bold:true,underline:{type:D.UnderlineType.SINGLE}}),{alignment:D.AlignmentType.CENTER,spacing:{before:120,after:120}}),
-      visitTable,
-      ...(obsParas.length>0?[pr(vr('DETALLE DE OBSERVACIONES TÉCNICAS:',{bold:true,underline:{type:D.UnderlineType.SINGLE}}),{spacing:{before:140,after:80}}),...obsParas]:[])
-    ],{columnSpan:2})]}),
-    // Secciones de actividades
-    ...actSectionRows
-  ];
+  // ---------- Encabezado y pie ----------
+  let logoIndap=null,logoPeumo=null;
+  try{logoIndap=img(LOGO_INDAP,120,60)}catch(e){}
+  try{logoPeumo=img(LOGO_PEUMO,175,33)}catch(e){}
+  const header=new D.Header({children:[
+    new D.Table({width:{size:W,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,rows:[new D.TableRow({children:[
+      cell(par(logoIndap||run(''),{spacing:{after:0}}),{width:{size:W/2,type:D.WidthType.DXA},margins:{top:0,bottom:0,left:0,right:0}}),
+      cell(par(logoPeumo||run(''),{alignment:D.AlignmentType.RIGHT,spacing:{after:0}}),{width:{size:W/2,type:D.WidthType.DXA},margins:{top:0,bottom:0,left:0,right:0}})]})]}),
+    par(run(''),{spacing:{before:0,after:120},border:{bottom:{style:D.BorderStyle.SINGLE,size:8,color:NAVY,space:1}}})
+  ]});
+  const footer=new D.Footer({children:[new D.Table({width:{size:W,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,rows:[new D.TableRow({children:[
+    cell(par(run('PRODESAL Peumo  ·  INDAP  ·  Región del Libertador General Bernardo O’Higgins',{size:14,color:GRAY}),{spacing:{after:0}}),{width:{size:7000,type:D.WidthType.DXA},margins:{top:0,bottom:0,left:0,right:0},borders:{...noB,top:{style:D.BorderStyle.SINGLE,size:4,color:LINE}}}),
+    cell(new D.Paragraph({alignment:D.AlignmentType.RIGHT,spacing:{after:0},children:[run('Página ',{size:14,color:GRAY}),new D.TextRun({children:[D.PageNumber.CURRENT],font:F,size:14,color:GRAY}),run(' de ',{size:14,color:GRAY}),new D.TextRun({children:[D.PageNumber.TOTAL_PAGES],font:F,size:14,color:GRAY})]}),{width:{size:2900,type:D.WidthType.DXA},margins:{top:0,bottom:0,left:0,right:0},borders:{...noB,top:{style:D.BorderStyle.SINGLE,size:4,color:LINE}}})
+  ]})]})]});
 
-  const mainTable=new D.Table({
-    rows:mainTableRows,
-    width:{size:10205,type:D.WidthType.DXA},
-    layout:D.TableLayoutType.FIXED
-  });
-
-  bodyChildren.push(mainTable);
-
-  // Page break antes de firmas
-  bodyChildren.push(pr([],{pageBreakBefore:true}));
-
-  // Tabla de firmas
-  const firmaRow=(nombre,cargo)=>new D.TableRow({
-    height:{value:2400,rule:D.HeightRule.ATLEAST},
-    children:[tc(
-      [pr([],{spacing:{before:600}}),pr(vr(nombre.toUpperCase(),{bold:true}),{alignment:D.AlignmentType.CENTER}),pr(vr(cargo.toUpperCase(),{bold:true,underline:{type:D.UnderlineType.SINGLE}}),{alignment:D.AlignmentType.CENTER})],
-      {columnSpan:2,verticalAlign:D.VerticalAlign.BOTTOM}
-    )]
-  });
-
-  const firmaTable=new D.Table({
-    rows:[
-      firmaRow(asesorNombre,asesorCargo+' Programa PRODESAL'),
-      firmaRow(cfg.coord||'','Coordinador Programa PRODESAL'),
-      new D.TableRow({
-        height:{value:2400,rule:D.HeightRule.ATLEAST},
-        children:[tc(
-          [pr([],{spacing:{before:600}}),pr(vr((cfg.contra||'').toUpperCase(),{bold:true}),{alignment:D.AlignmentType.CENTER}),pr(vr((cfg.cContra||'').toUpperCase(),{bold:true,underline:{type:D.UnderlineType.SINGLE}}),{alignment:D.AlignmentType.CENTER}),pr(vr((cfg.depto||'').toUpperCase(),{bold:true}),{alignment:D.AlignmentType.CENTER})],
-          {columnSpan:2,verticalAlign:D.VerticalAlign.BOTTOM}
-        )]
-      })
-    ],
-    width:{size:10205,type:D.WidthType.DXA},
-    layout:D.TableLayoutType.FIXED
-  });
-
-  bodyChildren.push(firmaTable);
-
-  // --- Header con logos ---
-  const headerChildren=[];
-  if(logoIndap||logoPeumo){
-    const hCells=[];
-    hCells.push(new D.TableCell({
-      children:[logoIndap?pr(logoIndap):pr(vr(''))],
-      borders:noBrds,width:{size:50,type:D.WidthType.PERCENTAGE}
-    }));
-    hCells.push(new D.TableCell({
-      children:[logoPeumo?pr(logoPeumo,{alignment:D.AlignmentType.RIGHT}):pr(vr(''))],
-      borders:noBrds,width:{size:50,type:D.WidthType.PERCENTAGE}
-    }));
-    headerChildren.push(new D.Table({rows:[new D.TableRow({children:hCells})],width:{size:100,type:D.WidthType.PERCENTAGE}}));
-  }
-  headerChildren.push(pr([],{border:{bottom:{style:D.BorderStyle.SINGLE,size:3,color:'5B9BD5',space:1}}}));
-
-  // --- Footer ---
-  const footerChildren=[
-    pr([],{border:{top:{style:D.BorderStyle.SINGLE,size:1,color:'999999',space:1}}}),
-    pr(vr('PRODESAL INDAP — REGIÓN DEL LIBERTADOR GENERAL BERNARDO O’HIGGINS',{size:14,color:'666666'}),{alignment:D.AlignmentType.CENTER})
-  ];
-
-  // --- Documento final ---
   const docObj=new D.Document({
+    styles:{default:{document:{run:{font:F,size:20}}}},
     sections:[{
-      properties:{
-        page:{
-          size:{width:12240,height:15840}, // Letter
-          margin:{top:1588,right:1021,bottom:1134,left:1021,header:284,footer:284}
-        }
-      },
-      headers:{default:new D.Header({children:headerChildren})},
-      footers:{default:new D.Footer({children:footerChildren})},
-      children:bodyChildren
+      properties:{page:{size:{width:12240,height:15840},margin:{top:1700,right:1170,bottom:1200,left:1170,header:400,footer:400}}},
+      headers:{default:header},footers:{default:footer},children:body
     }]
   });
-
   try{
     nf('⏳ Generando '+fn+'.docx...');
     const blob=await D.Packer.toBlob(docObj);
-    const url=URL.createObjectURL(blob);
-    const link=document.createElement('a');
-    link.href=url;link.download=fn+'.docx';link.click();
-    URL.revokeObjectURL(url);
+    const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=fn+'.docx';link.click();URL.revokeObjectURL(url);
     nf('📄 '+fn+'.docx generado');
-  }catch(e){
-    nf('⚠️ Error generando .docx: '+e.message);
-    console.error('gI docx error:',e);
-  }
+  }catch(e){nf('⚠️ Error generando .docx: '+e.message);console.error('gI docx error:',e)}
 }
 
 // ========= INFORME EXCEL INDAP =========
 // Arma las actividades del período (compartido por planilla .xlsx y PDF)
 function buildActividades(periodo){
   const {vf,asesorNombre,asesorCargo}=getFilteredVis(periodo,'ind');
-  const {acts}=getActsCompiled(periodo);
+  const {acts,resumen}=getActsCompiled(periodo);
+  const secTxt=k=>(acts[k]||[]).map(actLinea).join('\n');
   const fmtD=f=>f?new Date(f+'T12:00:00').toLocaleDateString('es-CL',{day:'2-digit',month:'2-digit'}):'';
   const norm=t=>(t||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'');
   let mesNom,fn,periodoTxt;
@@ -1498,17 +1475,17 @@ function buildActividades(periodo){
     actividades.push({nombre:'VISITAS TÉCNICAS',detalle:txt});
   }
   const reuTxt=vf.filter(v=>norm(v.tipo).includes('reunion')).map(v=>'• '+fmtD(v.fecha)+' — '+(v.observacion||'Reunión con '+(v.agricultor||'usuarios del programa')));
-  if(acts.reuniones&&acts.reuniones.trim()) reuTxt.push(acts.reuniones.trim());
+  if(secTxt('reuniones')) reuTxt.push(secTxt('reuniones'));
   if(reuTxt.length) actividades.push({nombre:'REUNIONES Y CAPACITACIONES',detalle:reuTxt.join('\n')});
-  if(acts.giras&&acts.giras.trim()) actividades.push({nombre:'GIRAS TÉCNICAS / ASESORÍA DE ESPECIALISTAS',detalle:acts.giras.trim()});
-  if(acts.operativos&&acts.operativos.trim()) actividades.push({nombre:'OPERATIVOS VETERINARIOS / PARCELAS DEMOSTRATIVAS',detalle:acts.operativos.trim()});
-  if(acts.articulacion&&acts.articulacion.trim()) actividades.push({nombre:'ARTICULACIÓN DE RECURSOS',detalle:acts.articulacion.trim()});
+  if(secTxt('giras')) actividades.push({nombre:'GIRAS TÉCNICAS / ASESORÍA DE ESPECIALISTAS',detalle:secTxt('giras')});
+  if(secTxt('operativos')) actividades.push({nombre:'OPERATIVOS VETERINARIOS / PARCELAS DEMOSTRATIVAS',detalle:secTxt('operativos')});
+  if(secTxt('articulacion')) actividades.push({nombre:'ARTICULACIÓN DE RECURSOS',detalle:secTxt('articulacion')});
   const byTipo={};
   vf.filter(v=>v.tipo&&!v.tipo.includes('Visita')&&!norm(v.tipo).includes('reunion')).forEach(v=>{(byTipo[v.tipo]=byTipo[v.tipo]||[]).push(v)});
   Object.keys(byTipo).forEach(t=>actividades.push({nombre:t.toUpperCase(),detalle:byTipo[t].map(v=>'• '+fmtD(v.fecha)+' — '+(v.observacion||v.agricultor||'')).join('\n')||'Actividad realizada.'}));
-  if(acts.otras&&acts.otras.trim()) actividades.push({nombre:'OTRAS ACTIVIDADES',detalle:acts.otras.trim()});
+  if(secTxt('otras')) actividades.push({nombre:'OTRAS ACTIVIDADES',detalle:secTxt('otras')});
   if(actividades.length===0) actividades.push({nombre:'VISITAS TÉCNICAS',detalle:'Sin actividades registradas en el período.'});
-  return {actividades,vt,acts,mesNom,fn,asesorNombre,asesorCargo,resumen:(periodo==='mes'&&acts.resumen&&acts.resumen.trim())?acts.resumen.trim():''};
+  return {actividades,vt,acts,mesNom,fn,asesorNombre,asesorCargo,resumen:periodo==='mes'?resumen:''};
 }
 
 // ========= PLANILLA INDAP .xlsx (ExcelJS) =========
@@ -1553,10 +1530,14 @@ async function gExcel(periodo){
 // ========= EXPORTAR A PDF (vista de impresión del navegador) =========
 function gPDF(periodo,tipo){
   const esc=h;
-  const css='<style>@page{size:'+(tipo==='xls'?'letter landscape':'letter')+';margin:1.5cm 1.6cm}body{font-family:Verdana,Arial,sans-serif;font-size:8.5pt;color:#111;margin:0}table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 7px;vertical-align:top}.hd{display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid #5B9BD5;padding-bottom:4px;margin-bottom:12px}.ti{background:#5B9BD5;color:#fff;font-weight:bold;text-align:center;font-size:10.5pt;padding:8px}.sc{background:#DEEBF6;font-weight:bold}.th{background:#D6E4F0;font-weight:bold;text-align:center;font-size:8pt}.c{text-align:center}td.c{vertical-align:middle}.ph{color:#999;font-style:italic;text-align:center;padding:14px}.fo{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin:6px 0}.fo img{width:47%;max-height:6.5cm;object-fit:contain}.pb{page-break-before:always}.fi td{height:95px;text-align:center;vertical-align:bottom;font-weight:bold}.ft{position:fixed;bottom:0;left:0;right:0;text-align:center;font-size:7pt;color:#666;border-top:1px solid #999;padding-top:3px}.bar{position:fixed;top:0;left:0;right:0;background:#1f2937;color:#fff;padding:8px;text-align:center;font-family:Arial;font-size:13px}.bar b{cursor:pointer;background:#22c55e;padding:5px 12px;border-radius:5px;margin-left:8px}@media print{.bar{display:none}}pre{white-space:pre-wrap;font:inherit;margin:0}</style>';
+  const css='<style>@page{size:'+(tipo==='xls'?'letter landscape':'letter')+';margin:1.6cm 1.7cm 1.5cm}body{font-family:Calibri,"Segoe UI",Arial,sans-serif;font-size:10pt;color:#262626;margin:0;line-height:1.38}'
+    +(tipo==='xls'
+      ?'table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 7px;vertical-align:top}.ti{background:#5B9BD5;color:#fff;font-weight:bold;text-align:center;padding:8px}.sc{background:#DEEBF6;font-weight:bold}.th{background:#D6E4F0;font-weight:bold;text-align:center;font-size:9pt}.c{text-align:center}td.c{vertical-align:middle}pre{white-space:pre-wrap;font:inherit;margin:0}'
+      :'.kicker{font-size:8.5pt;font-weight:bold;letter-spacing:.22em;text-transform:uppercase;color:#2E75B6;margin-top:6px}h1{font-size:23pt;color:#1F3864;margin:2px 0 2px;font-weight:bold}.sub{color:#595959;font-size:9pt;margin-bottom:14px}table{border-collapse:collapse;width:100%}.ficha th{width:30%;text-align:left;font-size:8pt;letter-spacing:.08em;text-transform:uppercase;color:#595959;background:#F2F5F9;padding:5px 8px;border-bottom:2px solid #fff}.ficha td{padding:5px 8px;color:#1F3864;border-bottom:1px solid #BFC7D1}h2{display:flex;align-items:baseline;gap:8px;font-size:11pt;letter-spacing:.1em;text-transform:uppercase;color:#1F3864;border-bottom:1.2px solid #2E75B6;padding-bottom:3px;margin:20px 0 8px;page-break-after:avoid}h2 span{color:#2E75B6;font-size:12pt}h3{font-size:10.5pt;color:#1F3864;margin:14px 0 5px;page-break-after:avoid}.j{text-align:justify;margin:0 0 7px}.vis th{background:#1F3864;color:#fff;font-size:8pt;letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:5px 6px}.vis td{padding:4px 6px;border-bottom:1px solid #BFC7D1;font-size:9pt}.vis tr:nth-child(even) td{background:#F2F5F9}.c{text-align:center}.mt{color:#595959;font-size:8pt}.obs b{color:#1F3864}.meta{font-size:8pt;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:#595959;margin:8px 0 3px;page-break-after:avoid}.vac{color:#595959;font-style:italic;font-size:9pt}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 2px}.grid img{width:100%;max-height:7cm;object-fit:cover;border:1px solid #BFC7D1;border-radius:3px;page-break-inside:avoid}.cap{text-align:center;font-size:8pt;font-style:italic;color:#595959;margin-bottom:10px}.firmas{margin-top:34px;page-break-inside:avoid}.firmas td{width:33%;text-align:center;vertical-align:bottom;padding:0 12px}.firmas .ln{border-top:1.2px solid #1F3864;margin:36px 0 5px}.firmas b{color:#1F3864;font-size:9pt}.firmas span{color:#595959;font-size:8pt}')
+    +'.hd{display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid '+(tipo==='xls'?'#5B9BD5':'#1F3864')+';padding-bottom:5px;margin-bottom:10px}.ft{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-between;font-size:7pt;color:#595959;border-top:1px solid #BFC7D1;padding-top:3px}.bar{position:fixed;top:0;left:0;right:0;background:#1f2937;color:#fff;padding:8px;text-align:center;font-family:Arial;font-size:13px;z-index:9}.bar b{cursor:pointer;background:#22c55e;padding:5px 12px;border-radius:5px;margin-left:8px}@media print{.bar,.bar-sp{display:none}}</style>';
   const head='<div class="hd"><img src="'+LOGO_INDAP+'" width="130" height="65"><img src="'+LOGO_PEUMO+'" width="190" height="36"></div>';
-  const bar='<div class="bar">Vista previa — en el diálogo de impresión elige <u>Guardar como PDF</u> <b onclick="window.print()">🖨️ Imprimir / PDF</b></div><div style="height:38px"></div>';
-  const foot='<div class="ft">PRODESAL INDAP — REGIÓN DEL LIBERTADOR GENERAL BERNARDO O’HIGGINS</div>';
+  const bar='<div class="bar">Vista previa — en el diálogo de impresión elige <u>Guardar como PDF</u> <b onclick="window.print()">🖨️ Imprimir / PDF</b></div><div class="bar-sp" style="height:38px"></div>';
+  const foot='<div class="ft"><span>PRODESAL Peumo · INDAP · Región del Libertador General Bernardo O’Higgins</span><span>'+esc(cfg.unidad||'PRODESAL Peumo')+'</span></div>';
   let html,titulo;
   if(tipo==='xls'){
     const {actividades,vt,mesNom,fn,asesorNombre,asesorCargo,resumen}=buildActividades(periodo);titulo=fn;
@@ -1569,30 +1550,36 @@ function gPDF(periodo,tipo){
       +actividades.map((a,i)=>'<tr><td class="c"><b>'+(i+1)+'</b></td><td class="c"><b>'+esc(a.nombre)+'</b></td><td><pre>'+esc(a.detalle)+'</pre></td></tr>').join('')
       +'</table><table style="margin-top:60px;border:none"><tr><td style="border:none;width:50%;text-align:center"><div style="border-top:1px solid #333;width:70%;margin:0 auto;padding-top:4px"><b>'+esc(asesorNombre.toUpperCase())+'</b><br><u>'+esc(asesorCargo.toUpperCase())+' PROGRAMA PRODESAL</u></div></td><td style="border:none;text-align:center"><div style="border-top:1px solid #333;width:70%;margin:0 auto;padding-top:4px"><b>'+esc((cfg.coord||'').toUpperCase())+'</b><br><u>COORDINADOR PROGRAMA PRODESAL</u></div></td></tr></table>';
   }else{
-    const {vf,tit,fn,asesorNombre,asesorCargo}=getFilteredVis(periodo,'mun');titulo=fn;
+    const {vf,fn,asesorNombre,asesorCargo}=getFilteredVis(periodo,'mun');titulo=fn;
     const ab=cfg.abr||abv(cfg.nombre);
-    const vt=vf.filter(v=>v.tipo==='Visita Técnica'||!v.tipo);
-    const {acts,fotos}=getActsCompiled(periodo);
-    const fL=f=>f?new Date(f+'T12:00:00').toLocaleDateString('es-CL',{day:'numeric',month:'long'}):'';
-    const rows=vt.map(v=>'<tr><td>'+fL(v.fecha).toUpperCase()+'</td><td>'+esc(v.rut)+'</td><td>'+esc((v.agricultor||'').toUpperCase())+'</td><td>ASESORIA TECNICA</td><td>'+esc(v.asesor||ab)+'</td><td class="c">'+esc(v.folio)+'</td></tr>').join('');
-    const obs=vt.filter(v=>v.observacion).map(v=>'<p style="margin:5px 0;text-align:justify"><b>'+esc(v.agricultor)+' ('+fL(v.fecha)+'):</b> '+esc(v.observacion)+'</p>').join('');
-    const secs=ACT_SECCIONES.map(s=>{
-      const t=acts[s.key]||'',fs=fotos[s.key]||[];
-      let c='';
-      if(t) c+=t.split(/\n+/).filter(l=>l.trim()).map(l=>{const m=l.match(/^(SEMANA \d+): ([\s\S]*)$/);return '<p style="margin:4px 0;text-align:justify">'+(m?'<b>'+esc(m[1])+':</b> '+esc(m[2]):esc(l))+'</p>'}).join('');
-      if(fs.length) c+='<div class="fo">'+fs.map(f=>'<img src="'+f.data+'">').join('')+'</div>';
-      if(!c) c='<div class="ph">[Insertar fotografías]</div>';
-      return '<tr><td colspan="2" class="sc">'+esc(s.label)+' (Adjuntar Fotografías)</td></tr><tr><td colspan="2">'+c+'</td></tr>';
-    }).join('');
-    html='<table><tr><td colspan="2" class="ti">'+esc(tit)+'</td></tr>'
-      +'<tr><td style="width:50%"><b>Nombre</b></td><td>'+esc(asesorNombre)+'</td></tr><tr><td><b>Unidad Operativa</b></td><td>'+esc(cfg.unidad||'PRODESAL Peumo')+'</td></tr><tr><td><b>Nº de Visitas realizadas</b></td><td>'+String(vt.length).padStart(2,'0')+'</td></tr>'
-      +'<tr><td colspan="2" style="background:#DEEBF6;padding:2px"></td></tr>'
-      +(periodo==='mes'&&acts.resumen?'<tr><td colspan="2" class="sc">Resumen Ejecutivo</td></tr><tr><td colspan="2" style="text-align:justify">'+esc(acts.resumen)+'</td></tr>':'')
-      +'<tr><td colspan="2" class="sc">Visitas</td></tr><tr><td colspan="2"><p style="text-align:justify">En cuanto a la estructura definida por INDAP, las visitas del '+esc(asesorCargo.toLowerCase())+' del programa tienen como propósito la evaluación, entrega de información al usuario y validación de rendiciones o avances de proyectos.</p>'
-      +'<p class="c" style="margin:10px 0"><b><u>VISITAS TÉCNICAS</u></b></p><table><tr><th class="th">FECHA</th><th class="th">RUT</th><th class="th">AGRICULTOR</th><th class="th">TIPO</th><th class="th">ASESOR</th><th class="th">FOLIO</th></tr>'+rows+'</table>'
-      +(obs?'<p style="margin:12px 0 4px"><b><u>DETALLE DE OBSERVACIONES TÉCNICAS:</u></b></p>'+obs:'')+'</td></tr>'
-      +secs+'</table>'
-      +'<table class="fi pb"><tr><td>'+esc(asesorNombre.toUpperCase())+'<br><u>'+esc(asesorCargo.toUpperCase())+' PROGRAMA PRODESAL</u></td></tr><tr><td>'+esc((cfg.coord||'').toUpperCase())+'<br><u>COORDINADOR PROGRAMA PRODESAL</u></td></tr><tr><td>'+esc((cfg.contra||'').toUpperCase())+'<br><u>'+esc((cfg.cContra||'').toUpperCase())+'</u><br>'+esc((cfg.depto||'').toUpperCase())+'</td></tr></table>';
+    const vt=vf.filter(v=>v.tipo==='Visita Técnica'||!v.tipo).sort((a,b)=>(a.fecha||'').localeCompare(b.fecha||''));
+    const {acts,fotos,resumen}=getActsCompiled(periodo);
+    const esSem=periodo==='sem';
+    const tituloGrande=esSem?'Semana '+document.getElementById('gs').value+' · 2026':periodoTexto('mes').replace(' de 2026',' · 2026');
+    const nAct=Object.values(acts).reduce((n,l)=>n+l.length,0);
+    let n=0;const sec=t=>'<h2><span>'+String(++n).padStart(2,'0')+'</span>'+esc(t)+'</h2>';
+    const parrafos=t=>t.split(/\n+/).filter(l=>l.trim()).map(l=>'<p class="j">'+esc(l)+'</p>').join('');
+    const ficha=[['Profesional',asesorNombre],['Cargo',asesorCargo],['Unidad operativa',cfg.unidad||'PRODESAL Peumo'],['Período',periodoTexto(periodo)],['Visitas técnicas',vt.length],['Actividades registradas',nAct]];
+    html='<div class="kicker">Informe '+(esSem?'semanal':'mensual')+' de actividades</div><h1>'+esc(tituloGrande)+'</h1><div class="sub">Programa PRODESAL Peumo · Ilustre Municipalidad de Peumo · INDAP</div>'
+      +'<table class="ficha">'+ficha.map(([k,v])=>'<tr><th>'+esc(k)+'</th><td>'+esc(v)+'</td></tr>').join('')+'</table>';
+    if(!esSem&&resumen) html+=sec('Resumen ejecutivo')+parrafos(resumen);
+    html+=sec('Visitas técnicas')+'<p class="j">En el marco de la estructura definida por INDAP, las visitas del '+esc(asesorCargo.toLowerCase())+' tienen como propósito la evaluación en terreno, la entrega de información al usuario y la validación de rendiciones o avances de proyectos. Durante el período se realizaron '+vt.length+' visita'+(vt.length===1?'':'s')+' técnica'+(vt.length===1?'':'s')+'.</p>';
+    if(vt.length){
+      html+='<table class="vis"><thead><tr><th>Fecha</th><th>RUT</th><th>Agricultor/a</th><th>Tipo</th><th class="c">Asesor</th><th class="c">Folio</th></tr></thead><tbody>'
+        +vt.map(v=>'<tr><td>'+esc(fmtCorto(v.fecha))+'</td><td>'+esc(v.rut)+'</td><td>'+esc(v.agricultor)+'</td><td>Asesoría técnica</td><td class="c">'+esc(v.asesor||ab)+'</td><td class="c">'+esc(v.folio)+'</td></tr>').join('')+'</tbody></table>';
+      const obs=vt.filter(v=>(v.observacion||'').trim());
+      if(obs.length) html+='<h3>Observaciones técnicas</h3>'+obs.map(v=>'<p class="j obs"><b>'+esc(v.agricultor)+'</b><span class="mt"> · '+esc(fmtLargo(v.fecha))+'</span><br>'+esc(v.observacion.trim())+'</p>').join('');
+    }else html+='<p class="vac">Sin visitas técnicas registradas en el período.</p>';
+    ACT_SECCIONES.forEach(s=>{
+      const lista=acts[s.key]||[],fs=fotos[s.key]||[];
+      html+=sec(s.label);
+      if(!lista.length&&!fs.length){html+='<p class="vac">Sin actividades registradas en el período.</p>';return}
+      lista.forEach(a=>{const partes=[];if(a.fecha)partes.push(fmtLargo(a.fecha));if(a.lugar)partes.push(a.lugar.trim());if(!esSem&&a.semana)partes.push('Semana '+a.semana);
+        html+=(partes.length?'<div class="meta">'+esc(partes.join('   ·   '))+'</div>':'')+parrafos(a.texto)});
+      if(fs.length) html+='<div class="grid">'+fs.map(f=>'<img src="'+f.data+'">').join('')+'</div><div class="cap">Registro fotográfico · '+esc(s.label)+'</div>';
+    });
+    html+='<table class="firmas"><tr>'+[[asesorNombre,asesorCargo,'Programa PRODESAL Peumo'],[cfg.coord||'',cfg.cCoord||'Coordinador Programa PRODESAL',''],[cfg.contra||'',cfg.cContra||'Contraparte Entidad Ejecutora',cfg.depto||'']]
+      .map(([nm,c,d])=>'<td><div class="ln"></div><b>'+esc(nm.toUpperCase())+'</b><br><span>'+esc(c)+(d?'<br>'+esc(d):'')+'</span></td>').join('')+'</tr></table>';
   }
   const w=window.open('','_blank');
   if(!w){nf('⚠️ Permite ventanas emergentes para exportar a PDF');return}

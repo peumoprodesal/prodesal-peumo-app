@@ -181,52 +181,53 @@ function getActKey(periodo){
 function saveActs(){SV('actData',actData)}
 function getActs(key){return actData[key]||{}}
 // Lista de actividades de una sección (migra el formato antiguo de texto plano)
+const uid=()=>'a'+Date.now().toString(36)+Math.random().toString(36).slice(2,7);
 function getActList(key,seccion){
-  const d=actData[key]||{};let v=d[seccion];
-  if(typeof v==='string'){v=v.trim()?[{fecha:'',lugar:'',texto:v}]:[];if(!actData[key])actData[key]={};actData[key][seccion]=v;saveActs()}
-  return Array.isArray(v)?v:[];
+  const d=actData[key]||{};let v=d[seccion];let dirty=false;
+  if(typeof v==='string'){v=v.trim()?[{fecha:'',lugar:'',texto:v}]:[];dirty=true}
+  if(!Array.isArray(v))return [];
+  v.forEach(a=>{if(!a.id){a.id=uid();dirty=true}if(a.titulo==null){a.titulo='';dirty=true}});
+  if(dirty){if(!actData[key])actData[key]={};actData[key][seccion]=v;saveActs()}
+  return v;
 }
 function setAct(key,seccion,texto){if(!actData[key])actData[key]={};actData[key][seccion]=texto;saveActs()} // resumen mensual
 function addActividad(key,seccion){
   if(!actData[key])actData[key]={};
-  const l=getActList(key,seccion);l.push({fecha:'',lugar:'',texto:''});actData[key][seccion]=l;saveActs();R();
+  const l=getActList(key,seccion);l.push({id:uid(),titulo:'',fecha:'',lugar:'',texto:''});actData[key][seccion]=l;saveActs();R();
 }
 function rmActividad(key,seccion,i){
   const l=getActList(key,seccion);if(l[i]&&l[i].texto&&!confirm('¿Eliminar esta actividad?'))return;
-  l.splice(i,1);actData[key][seccion]=l;saveActs();R();
+  const [a]=l.splice(i,1);if(a&&a.id)delete actFotos[a.id];actData[key][seccion]=l;saveActs();R();
 }
 function setActField(key,seccion,i,campo,val){
   const l=getActList(key,seccion);if(!l[i])return;l[i][campo]=val;actData[key][seccion]=l;saveActs();
 }
-// Fotos: máximo 4 por sección; el informe usa siempre un número par (2 o 4)
-function addFoto(key,seccion,file){
-  if(!actFotos[key])actFotos[key]={};
-  if(!actFotos[key][seccion])actFotos[key][seccion]=[];
-  if(actFotos[key][seccion].length>=MAX_FOTOS){nf('⚠️ Máximo '+MAX_FOTOS+' fotos por sección');return}
+// Fotos por actividad (actFotos[idActividad] = [{name,data,w,h}]) — máximo 4; el informe usa 2 o 4
+function addFoto(actId,file){
+  if(!actFotos[actId])actFotos[actId]=[];
+  if(actFotos[actId].length>=MAX_FOTOS){nf('⚠️ Máximo '+MAX_FOTOS+' fotos por actividad');return}
   const reader=new FileReader();
   reader.onload=e=>{
-    const lista=actFotos[key][seccion];if(lista.length>=MAX_FOTOS)return;
+    const lista=actFotos[actId];if(lista.length>=MAX_FOTOS)return;
     const foto={name:file.name,data:e.target.result,w:4,h:3};
     const im=new Image();im.onload=()=>{foto.w=im.naturalWidth||4;foto.h=im.naturalHeight||3};im.src=foto.data;
     lista.push(foto);
-    renderFotoPreview(key,seccion);
-    if(lista.length%2) nf('📷 '+lista.length+' foto(s). El informe usa 2 o 4 por sección: agrega una más');
+    renderFotoPreview(actId);
+    if(lista.length%2) nf('📷 '+lista.length+' foto(s). El informe usa 2 o 4 por actividad: agrega una más');
     else nf('📷 '+lista.length+' fotos listas');
   };
   reader.readAsDataURL(file);
 }
-function fotosPares(key,seccion){const f=(actFotos[key]&&actFotos[key][seccion])||[];return f.slice(0,f.length>=4?4:f.length>=2?2:0)}
-function renderFotoPreview(key,seccion){
-  const container=document.getElementById('fp_'+seccion);
+function fotosPares(actId){const f=actFotos[actId]||[];return f.slice(0,f.length>=4?4:f.length>=2?2:0)}
+function renderFotoPreview(actId){
+  const container=document.getElementById('fp_'+actId);
   if(!container)return;
-  const fotos=(actFotos[key]&&actFotos[key][seccion])||[];
-  container.innerHTML=fotos.map((f,i)=>'<div style="display:inline-block;position:relative;margin:4px"><img src="'+f.data+'" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #d1d5db"><button onclick="rmFoto(\''+key+'\',\''+seccion+'\','+i+')" style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;line-height:16px">×</button></div>').join('')
+  const fotos=actFotos[actId]||[];
+  container.innerHTML=fotos.map((f,i)=>'<div style="display:inline-block;position:relative;margin:4px"><img src="'+f.data+'" style="width:60px;height:60px;object-fit:cover;border-radius:4px;border:1px solid #d1d5db"><button onclick="rmFoto(\''+actId+'\','+i+')" style="position:absolute;top:-4px;right:-4px;background:#ef4444;color:#fff;border:none;border-radius:50%;width:16px;height:16px;font-size:10px;cursor:pointer;line-height:16px">×</button></div>').join('')
     +(fotos.length%2?'<span style="font-size:10px;color:#b45309;margin-left:6px">Se requieren 2 o 4 fotos (hay '+fotos.length+')</span>':'')
     +(fotos.length>=MAX_FOTOS?'<span style="font-size:10px;color:#6b7280;margin-left:6px">Máximo alcanzado</span>':'');
 }
-function rmFoto(key,seccion,idx){
-  if(actFotos[key]&&actFotos[key][seccion]){actFotos[key][seccion].splice(idx,1);renderFotoPreview(key,seccion)}
-}
+function rmFoto(actId,idx){if(actFotos[actId]){actFotos[actId].splice(idx,1);renderFotoPreview(actId)}}
 
 // ===== Respaldo e importación de semanas (para armar el mensual con semanas de otros dispositivos) =====
 function semanasConDatos(){return Object.keys(actData).filter(k=>/^sem\d+_2026$/.test(k)&&ACT_SECCIONES.some(x=>getActList(k,x.key).some(a=>(a.texto||'').trim()))).map(k=>+k.match(/\d+/)[0]).sort((a,b)=>a-b)}
@@ -235,7 +236,7 @@ function exportSemana(){
   const {ini,fin}=weekRange(w);const d0=ini.toISOString().slice(0,10),d1=fin.toISOString().slice(0,10);
   const visitas=vis.filter(v=>v.fecha>=d0&&v.fecha<=d1);
   const data={tipo:'prodesal_semana',version:2,semana:w,anio:2026,asesor:cfg.abr,exportado:new Date().toISOString(),
-    acts:Object.fromEntries(ACT_SECCIONES.map(x=>[x.key,getActList(k,x.key)])),fotos:actFotos[k]||{},visitas};
+    acts:Object.fromEntries(ACT_SECCIONES.map(x=>[x.key,getActList(k,x.key)])),fotos:Object.fromEntries(ACT_SECCIONES.flatMap(x=>getActList(k,x.key).map(a=>[a.id,actFotos[a.id]||[]])).filter(e=>e[1].length)),visitas};
   const blob=new Blob([JSON.stringify(data)],{type:'application/json'});
   const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download='SEMANA_'+w+'_2026_respaldo.json';a.click();URL.revokeObjectURL(url);
   nf('💾 Respaldo de la semana '+w+' descargado');
@@ -256,14 +257,17 @@ const MESES_RX='enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|oct
 const META2_RX=new RegExp('^(.{0,60}?)[,\\s]*(?:(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo),?\\s+)?(\\d{1,2})\\s+de\\s+('+MESES_RX+')\\s+de\\s+(\\d{4})\\.?$','i');
 const META_RX=new RegExp('^(?:(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo),?\\s+)?(\\d{1,2})\\s+de\\s+('+MESES_RX+')\\s+de\\s+(\\d{4})(.*)$','i');
 
+const DIAS_RX='lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo';
+const FECHA_RX=new RegExp('(\\d{1,2})\\s+de\\s+('+MESES_RX+')\\s+(?:de\\s+)?(\\d{4})','i');
 function secuenciaASemana(seq,semanaDetectada){
-  // Semana: del texto ("SEMANA 39", "Semana 39 · 2026") si no vino del nombre
   let semana=semanaDetectada;
   if(!semana){for(const e of seq){if(e.t!=='txt')continue;const m=e.s.match(/semana\s+(\d{1,2})\b/i);if(m){semana=+m[1];break}}}
   const acts={},fotos={};let cur=null,actual=null;
-  const nuevaAct=(fecha,lugar)=>{actual={fecha:fecha||'',lugar:lugar||'',texto:''};(acts[cur]=acts[cur]||[]).push(actual)};
+  const nueva=(o={})=>{actual={id:uid(),titulo:'',fecha:'',lugar:'',texto:'',...o};(acts[cur]=acts[cur]||[]).push(actual);return actual};
+  const esMayus=t=>t.length<=120&&t===t.toUpperCase()&&/[A-ZÁÉÍÓÚÑ]{3}/.test(t);
+  const limpiaLugar=t=>t.replace(/^[\s,·•\-–—]+|[\s,·•\-–—]+$/g,'').replace(/^(lugar|sector)\s*:\s*/i,'').replace(/\s*,\s*(?:(?:'+DIAS_RX+')(?:\s+y\s+\w+)?)\s*$/i,'').trim();
   for(const e of seq){
-    if(e.t==='img'){if(cur){(fotos[cur]=fotos[cur]||[]);if(fotos[cur].length<MAX_FOTOS)fotos[cur].push({name:'importada',data:e.data,w:e.w,h:e.h})}continue}
+    if(e.t==='img'){if(cur){if(!actual)nueva();(fotos[actual.id]=fotos[actual.id]||[]);if(fotos[actual.id].length<MAX_FOTOS)fotos[actual.id].push({name:'importada',data:e.data,w:e.w,h:e.h})}continue}
     const s=e.s.replace(/\s+/g,' ').trim();if(!s)continue;
     if(s.length<90){
       if(FIN_RX.test(s)&&!/:/.test(s)){cur=null;continue}
@@ -274,19 +278,32 @@ function secuenciaASemana(seq,semanaDetectada){
       if(sec){cur=sec.key;actual=null;continue}
     }
     if(!cur||RUIDO_RX.test(s))continue;
-    const mm=s.match(META_RX);
-    if(mm){const mes=MESES.indexOf(mm[2].toLowerCase());const fecha=mm[3]+'-'+String(mes+1).padStart(2,'0')+'-'+mm[1].padStart(2,'0');
-      let resto=mm[4].replace(/^[\s·•\-–]+/,'').trim();let lugar='';
-      if(resto){const partes=resto.split(/\s+·\s+|\s{2,}/);lugar=partes[0].replace(/semana \d+/i,'').trim();if(/^semana \d+$/i.test(lugar))lugar=''}
-      nuevaAct(fecha,lugar);continue}
-    const m2=s.length<=90?s.match(META2_RX):null;
-    if(m2){const mes=MESES.indexOf(m2[3].toLowerCase());const fecha=m2[4]+'-'+String(mes+1).padStart(2,'0')+'-'+m2[2].padStart(2,'0');const lugar=m2[1].replace(/[,\s]+$/,'').trim();
-      const t=actual?actual.texto.trim():'';const esTitulo=t&&t.length<70&&t===t.toUpperCase();
-      if(actual&&(!t||esTitulo)){actual.fecha=fecha;if(lugar&&!actual.lugar)actual.lugar=lugar;if(esTitulo)actual.texto=t.charAt(0)+t.slice(1).toLowerCase()+'.'}else nuevaAct(fecha,lugar);continue}
-    if(!actual)nuevaAct('','');
+    if(/^semana\s+\d{1,2}(\s+de\s+\d{4})?$/i.test(s))continue; // "SEMANA 37 DE 2026" suelto
+    // --- línea con fecha: formato nuevo "MARTES, 22 DE SEPTIEMBRE DE 2026 · LUGAR · SEMANA 39" o antiguo "LUGAR, MARTES 22 DE SEPTIEMBRE DE 2026"
+    const fm=s.length<=170?s.match(FECHA_RX):null;
+    if(fm&&(s.length<=170)&&(s.length-fm[0].length<120)){
+      const mes=MESES.indexOf(fm[2].toLowerCase());const fecha=fm[3]+'-'+String(mes+1).padStart(2,'0')+'-'+fm[1].padStart(2,'0');
+      const antes=s.slice(0,fm.index),despues=s.slice(fm.index+fm[0].length);
+      let lugar='';
+      const partesDesp=despues.split(/\s+·\s+|\s{2,}/).map(x=>x.trim()).filter(x=>x&&!/^semana \d+/i.test(x)&&!/^[\s·•\-–—,.]*$/.test(x));
+      const antesLimpio=antes.replace(new RegExp('(?:'+DIAS_RX+')(?:\\s+y\\s+(?:'+DIAS_RX+'))?\\s*,?\\s*(?:\\d{1,2}\\s+y\\s*)?$','i'),'');
+      lugar=limpiaLugar(partesDesp.length?partesDesp[0].replace(/^[·\s]+/,''):antesLimpio);
+      const t=actual?actual.texto.trim():'';
+      if(actual&&!t){actual.fecha=fecha;if(lugar&&!actual.lugar)actual.lugar=lugar}else nueva({fecha,lugar});
+      continue;
+    }
+    // --- título en mayúsculas: inicia una actividad (o es la línea de lugar si ya hay título sin texto)
+    if(esMayus(s)){
+      const t=actual?actual.texto.trim():'';
+      if(actual&&!t&&actual.titulo&&!actual.lugar)actual.lugar=limpiaLugar(s.charAt(0)+s.slice(1).toLowerCase());
+      else nueva({titulo:s.replace(/[.:]+$/,'')});
+      continue;
+    }
+    if(actual&&actual.titulo&&!actual.texto.trim()&&!actual.lugar&&s.length<=90&&!/\b(se|el|la|los|las|un|una)\s+\w+\s+\w+/i.test(s)){actual.lugar=limpiaLugar(s.replace(/\.$/,''));continue}
+    if(!actual)nueva();
     actual.texto+=(actual.texto?' ':'')+s;
   }
-  Object.keys(acts).forEach(k=>{acts[k]=acts[k].filter(a=>a.texto.trim())});
+  Object.keys(acts).forEach(k=>{acts[k]=acts[k].filter(a=>a.texto.trim()||a.titulo||(fotos[a.id]||[]).length)});
   Object.keys(fotos).forEach(k=>{if(fotos[k].length%2)fotos[k]=fotos[k].slice(0,fotos[k].length-1);if(!fotos[k].length)delete fotos[k]});
   return {semana,acts,fotos};
 }
@@ -352,18 +369,35 @@ async function seqDesdePdf(file){
     for(let i=0;i<ops.fnArray.length;i++){const fn=ops.fnArray[i],a=ops.argsArray[i];
       if(fn===pdfjs.OPS.save)stack.push(ctm.slice());else if(fn===pdfjs.OPS.restore)ctm=stack.pop()||[1,0,0,1,0,0];
       else if(fn===pdfjs.OPS.transform)ctm=mul(ctm,a);
-      else if(fn===pdfjs.OPS.paintImageXObject||fn===pdfjs.OPS.paintJpegXObject){const name=a[0];let im=null;try{im=page.objs.get(name)}catch(e){try{im=pdf.commonObjs.get(name)}catch(_){}}
+      else if(fn===pdfjs.OPS.paintImageXObject||fn===pdfjs.OPS.paintJpegXObject){const name=a[0];let im=null;try{if(page.objs.has(name))im=page.objs.get(name)}catch(e){}if(!im){try{if(page.commonObjs.has(name))im=page.commonObjs.get(name)}catch(e){}}
         if(!im)continue;const hPt=Math.abs(ctm[3])||Math.abs(ctm[1]),y=ctm[5]+Math.max(0,ctm[3]);
         candidatos.push({pn,y,hPt,name,im,items})}
     }
     seq.push({pn,items});
   }
   // descartar logos: imágenes que se repiten en varias páginas o muy pequeñas (< 45 pt de alto)
-  const firmas={};candidatos.forEach(c=>{const k=(c.im.width||0)+'x'+(c.im.height||0);firmas[k]=(firmas[k]||new Set());firmas[k].add(c.pn)});
-  for(const c of candidatos){const k=(c.im.width||0)+'x'+(c.im.height||0);if(firmas[k].size>1&&pdf.numPages>1)continue;if(c.hPt<45||(c.im.width||0)<120||(c.im.height||0)<120)continue;
+  const huella=im=>{const d=im.data||new Uint8Array(0);let h=0;const step=Math.max(1,Math.floor(d.length/256));for(let i=0;i<d.length;i+=step)h=(h*31+d[i])>>>0;return (im.width||0)+'x'+(im.height||0)+'_'+h};
+  const firmas={};candidatos.forEach(c=>{c.k=huella(c.im);firmas[c.k]=(firmas[c.k]||new Set());firmas[c.k].add(c.pn)});
+  for(const c of candidatos){if(firmas[c.k].size>1&&pdf.numPages>1&&c.hPt<110)continue;if(c.hPt<45||(c.im.width||0)<120||(c.im.height||0)<120)continue;
     const data=await imagenPdfADataURL(c.im);if(!data)continue;c.items.push({y:c.y,t:'img',data:await comprimirDataURL(data),w:c.im.width,h:c.im.height})}
   const out=[];seq.forEach(p=>{p.items.sort((a,b)=>b.y-a.y).forEach(it=>out.push(it))});
-  return {seq:out};
+  return {seq:fusionarLineasPdf(out)};
+}
+// Une líneas que el PDF cortó al final del renglón (p. ej. "…comuna de Peumo, 3 DE" + "SEPTIEMBRE DE 2026.")
+function fusionarLineasPdf(items){
+  const out=[];const mesRx=new RegExp('^(?:'+MESES_RX+'|de\\s+\\d{4})','i');
+  for(const it of items){
+    const prev=out[out.length-1];
+    if(it.t==='txt'&&prev&&prev.t==='txt'){
+      const a=prev.s.trim(),b=it.s.trim();
+      const aUp=a===a.toUpperCase()&&/[A-ZÁÉÍÓÚÑ]{3}/.test(a),bUp=b===b.toUpperCase()&&/[A-ZÁÉÍÓÚÑ]{3}/.test(b);
+      const cortada=!/[.:;!?]$/.test(a)&&(/\b(DE|DEL|Y|LA|EL|EN|LOS|LAS|AL|CON|POR|PARA|\d{1,2})$/i.test(a)||mesRx.test(b)||/^[a-záéíóúñ]/.test(b)||(aUp&&bUp&&a.length>55));
+      const esTituloSec=SEC_RX.some(x=>x.rx.test(b)||x.rxs.test(b.replace(/\s+/g,'')))||FIN_RX.test(b)||RUIDO_RX.test(b)||/^semana\s+\d+/i.test(b);
+      if(cortada&&!esTituloSec&&a.length+b.length<600){prev.s=a+' '+b;continue}
+    }
+    out.push(it);
+  }
+  return out;
 }
 async function imagenPdfADataURL(im){
   try{const c=document.createElement('canvas');c.width=im.width;c.height=im.height;const ctx=c.getContext('2d');
@@ -390,8 +424,9 @@ async function importSemanas(files){
         else if(/\.pdf$/i.test(nombre))r=await seqDesdePdf(f);
         else throw new Error('formato no soportado (usa .json, .docx, .doc o .pdf)');
         if(r.embebido){data=r.embebido;data.fotos={};
-          // aunque venga embebido, rescatar fotos del cuerpo del .docx
-          try{const r2=await seqDesdeDocx(f,true);const p=secuenciaASemana(r2.seq,data.semana);data.fotos=p.fotos}catch(e){}
+          // aunque venga embebido, rescatar fotos del cuerpo del .docx y asociarlas por orden a cada actividad
+          try{const r2=await seqDesdeDocx(f,true);const p=secuenciaASemana(r2.seq,data.semana);
+            ACT_SECCIONES.forEach(x=>{const orig=(data.acts&&data.acts[x.key])||[],imp=(p.acts[x.key]||[]);orig.forEach((a,i)=>{a.id=a.id||uid();if(imp[i]&&p.fotos[imp[i].id])data.fotos[a.id]=p.fotos[imp[i].id]})})}catch(e){}
         }else{
           const p=secuenciaASemana(r.seq,semanaDeNombre(nombre));
           if(!p.semana){const w=prompt('No pude detectar el número de semana de "'+nombre+'". ¿Qué semana es? (1-53)');if(!w||!+w)throw new Error('semana no indicada');p.semana=+w}
@@ -400,8 +435,8 @@ async function importSemanas(files){
       }
       const k='sem'+data.semana+'_'+(data.anio||2026);
       if(!actData[k])actData[k]={};
-      let nA=0;ACT_SECCIONES.forEach(x=>{const l=(data.acts&&data.acts[x.key])||[];if(l.length){actData[k][x.key]=l.map(a=>({fecha:a.fecha||'',lugar:a.lugar||'',texto:(a.texto||'').trim()}));nA+=l.length}});
-      let nF=0;if(data.fotos&&Object.keys(data.fotos).length){actFotos[k]=actFotos[k]||{};Object.keys(data.fotos).forEach(sec=>{actFotos[k][sec]=(data.fotos[sec]||[]).slice(0,MAX_FOTOS);nF+=actFotos[k][sec].length})}
+      let nA=0;ACT_SECCIONES.forEach(x=>{const l=(data.acts&&data.acts[x.key])||[];if(l.length){actData[k][x.key]=l.map(a=>({id:a.id||uid(),titulo:a.titulo||'',fecha:a.fecha||'',lugar:a.lugar||'',texto:(a.texto||'').trim()}));nA+=l.length}});
+      let nF=0;if(data.fotos){Object.keys(data.fotos).forEach(id=>{const f=(data.fotos[id]||[]).slice(0,MAX_FOTOS);if(f.length){actFotos[id]=f;nF+=f.length}})}
       let nv=0;(data.visitas||[]).forEach(v=>{if(v.id&&!vis.some(x=>String(x.id)===String(v.id))){vis.push(v);nv++}});
       if(nv)SV('vis',vis);
       if(!nA&&!nF)throw new Error('no se encontraron actividades ni fotos en las secciones del informe');
@@ -446,7 +481,7 @@ async function mejorarTexto(id,key,seccion,i){
   const prompt='Eres el asesor profesional del programa PRODESAL Peumo (INDAP, Chile) y redactas informes institucionales para el municipio e INDAP.\n'
     +'Reescribe la siguiente nota de terreno como un párrafo (máximo dos) para la sección «'+(sec?sec.label:seccion)+'» de un informe de actividades.\n'
     +'Reglas: tono técnico, formal e impersonal en tercera persona ("Se realizó…", "El equipo técnico…"); corrige errores de transcripción de voz, nombres y términos agrícolas; conserva TODOS los datos concretos (personas, cifras, cultivos, lugares, acuerdos) y no inventes ninguno; sin viñetas, sin títulos, sin comillas, sin frases de relleno ni conclusiones genéricas; redacción natural, como la escribiría un profesional chileno con experiencia, no como un texto generado.\n'
-    +(a.lugar?'Lugar: '+a.lugar+'\n':'')+(fechaTxt?'Fecha: '+fechaTxt+'\n':'')
+    +(a.titulo?'Título de la actividad: '+a.titulo+'\n':'')+(a.lugar?'Lugar: '+a.lugar+'\n':'')+(fechaTxt?'Fecha: '+fechaTxt+'\n':'')
     +'\nNota original:\n'+ta.value.trim()+'\n\nEntrega únicamente el texto final.';
   try{
     const r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',
@@ -512,7 +547,7 @@ function R(){
   if(tab==='cfg')c.innerHTML=rCfg();
   else if(tab==='nom')c.innerHTML=sel?rFicha():rNom();
   else if(tab==='vis')c.innerHTML=sfv?rVF():rVL();
-  else{c.innerHTML=rInf();ACT_SECCIONES.forEach(x=>renderFotoPreview('sem'+(gsSel!=null?gsSel:wk(new Date()))+'_2026',x.key))}
+  else{c.innerHTML=rInf();const k='sem'+(gsSel!=null?gsSel:wk(new Date()))+'_2026';ACT_SECCIONES.forEach(x=>getActList(k,x.key).forEach(a=>renderFotoPreview(a.id)))}
 }
 
 // ========= CONFIG (simplificada) =========
@@ -1179,8 +1214,18 @@ function rInf(){
       </div>
       <div style="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:10px">
         <b style="font-size:12px">✏️ Actividades de la Semana</b>
-        <p class="mu" style="margin:4px 0 8px;font-size:11px">Agrega cada actividad con su fecha y lugar. Dicta con 🎙️, pule la redacción con ✨ (usa tu API key) y adjunta 2 o 4 fotos por sección. El texto se guarda solo; las fotos duran hasta recargar la página.</p>
-        ${ACT_SECCIONES.map(s=>{const ak='sem'+sem+'_2026',lista=getActList(ak,s.key);const nF=((actFotos[ak]||{})[s.key]||[]).length;
+        <p class="mu" style="margin:4px 0 8px;font-size:11px">Agrega cada actividad con su título, fecha y lugar. Dicta con 🎙️, pule la redacción con ✨ (usa tu API key) y adjunta 2 o 4 fotos a cada actividad. El texto se guarda solo; las fotos duran hasta recargar la página.</p>
+        ${ACT_SECCIONES.map(s=>{const ak='sem'+sem+'_2026',lista=getActList(ak,s.key);const nF=lista.reduce((n,a)=>n+((actFotos[a.id]||[]).length),0);
+          const items=lista.map((a,i)=>{const id=a.id;return '<div style="border:1px solid #e5e7eb;border-radius:6px;padding:6px;margin-top:6px;background:#fff">'
+            +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><input class="ip" value="'+h(a.titulo||'')+'" placeholder="Título de la actividad (opcional)" style="flex:1;min-width:160px;font-size:11px;font-weight:600" onchange="setActField(\''+ak+'\',\''+s.key+'\','+i+',\'titulo\',this.value)">'
+            +'<button id="vbtn_'+id+'" onclick="toggleVoz(\''+id+'\',\''+ak+'\',\''+s.key+'\','+i+')" class="bt bt-s" style="padding:2px 8px;font-size:11px" title="Dictar por voz">🎙️</button>'
+            +'<button id="mbtn_'+id+'" onclick="mejorarTexto(\''+id+'\',\''+ak+'\',\''+s.key+'\','+i+')" class="bt bt-s bt-g" style="padding:2px 8px;font-size:11px" title="Redactar en tono profesional">✨</button>'
+            +'<button onclick="rmActividad(\''+ak+'\',\''+s.key+'\','+i+')" class="bt bt-s" style="padding:2px 8px;font-size:11px;color:#ef4444" title="Eliminar">🗑️</button></div>'
+            +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:4px"><input type="date" class="ip" value="'+h(a.fecha||'')+'" style="width:140px;font-size:11px" onchange="setActField(\''+ak+'\',\''+s.key+'\','+i+',\'fecha\',this.value)">'
+            +'<input class="ip" value="'+h(a.lugar||'')+'" placeholder="Lugar (sector, predio, sede...)" style="flex:1;min-width:140px;font-size:11px" onchange="setActField(\''+ak+'\',\''+s.key+'\','+i+',\'lugar\',this.value)"></div>'
+            +'<textarea id="ta_'+id+'" class="ip" style="width:100%;height:56px;margin-top:4px;font-size:11px;resize:vertical" placeholder="Describe la actividad (qué se hizo, con quién, resultados)..." onchange="setActField(\''+ak+'\',\''+s.key+'\','+i+',\'texto\',this.value)">'+h(a.texto||'')+'</textarea>'
+            +'<div style="display:flex;align-items:center;gap:6px;margin-top:4px;flex-wrap:wrap"><label class="bt bt-s bt-o" style="padding:2px 8px;font-size:11px;cursor:pointer">📷 Fotos (2 o 4)<input type="file" accept="image/*" multiple hidden onchange="Array.from(this.files).forEach(f=>addFoto(\''+id+'\',f));this.value=\'\'"></label><div id="fp_'+id+'" style="display:flex;flex-wrap:wrap;align-items:center"></div></div></div>'}).join('');
+          return '<div style="margin-top:8px;padding:6px;background:#f9fafb;border-radius:6px"><div style="display:flex;align-items:center;gap:6px"><b style="font-size:11px;flex:1;color:#374151">'+s.label+'</b><span class="mu" style="font-size:10px">'+lista.length+' act. · '+nF+' fotos</span><button onclick="addActividad(\''+ak+'\',\''+s.key+'\')" class="bt bt-s bt-b" style="padding:2px 8px;font-size:11px">+ Actividad</button></div>'+items+'</div>'}).join('')}
           const items=lista.map((a,i)=>{const id=s.key+'_'+i;return '<div style="border:1px solid #e5e7eb;border-radius:6px;padding:6px;margin-top:6px;background:#fff">'
             +'<div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center"><input type="date" class="ip" value="'+h(a.fecha||'')+'" style="width:140px;font-size:11px" onchange="setActField(\''+ak+'\',\''+s.key+'\','+i+',\'fecha\',this.value)">'
             +'<input class="ip" value="'+h(a.lugar||'')+'" placeholder="Lugar (sector, predio, sede...)" style="flex:1;min-width:140px;font-size:11px" onchange="setActField(\''+ak+'\',\''+s.key+'\','+i+',\'lugar\',this.value)">'
@@ -1491,7 +1536,7 @@ function periodoTexto(periodo){
 // Devuelve acts[seccion] = [{fecha,lugar,texto,semana}], fotos[seccion] (2 o 4), resumen
 function getActsCompiled(periodo){
   const base=getActs(getActKey(periodo));
-  const out={},fotos={};
+  const out={};
   const semanas=[];
   if(periodo==='sem') semanas.push(+document.getElementById('gs').value);
   else{const m=+(document.getElementById('gm')?.value||new Date().getMonth());const st=new Set();
@@ -1499,15 +1544,13 @@ function getActsCompiled(periodo){
     semanas.push(...[...st].sort((a,b)=>a-b))}
   semanas.forEach(w=>{const k='sem'+w+'_2026';
     ACT_SECCIONES.forEach(sec=>{
-      const l=getActList(k,sec.key).filter(a=>(a.texto||'').trim());
-      if(l.length) out[sec.key]=(out[sec.key]||[]).concat(l.map(a=>({...a,semana:w})));
-      const f=fotosPares(k,sec.key);if(f.length) fotos[sec.key]=(fotos[sec.key]||[]).concat(f).slice(0,4);
+      const l=getActList(k,sec.key).filter(a=>(a.texto||'').trim()||(a.titulo||'').trim()||fotosPares(a.id).length);
+      if(l.length) out[sec.key]=(out[sec.key]||[]).concat(l.map(a=>({...a,semana:w,fotos:fotosPares(a.id)})));
     })});
-  Object.keys(fotos).forEach(k=>{if(fotos[k].length%2)fotos[k]=fotos[k].slice(0,fotos[k].length-1)});
-  return {acts:out,fotos,resumen:(base.resumen||'').trim()};
+  return {acts:out,fotos:{},resumen:(base.resumen||'').trim()};
 }
 // Texto plano de una actividad para la planilla
-const actLinea=a=>((a.fecha?fmtCorto(a.fecha):'')+(a.lugar?(a.fecha?' · ':'')+a.lugar:''))+(a.fecha||a.lugar?': ':'')+(a.texto||'').trim();
+const actLinea=a=>((a.titulo?a.titulo.trim()+' — ':'')+(a.fecha?fmtCorto(a.fecha):'')+(a.lugar?(a.fecha?' · ':'')+a.lugar:''))+(a.fecha||a.lugar||a.titulo?': ':'')+(a.texto||'').trim();
 
 async function gI(periodo,formato){
   const {vf,fn,asesorNombre,asesorCargo}=getFilteredVis(periodo,formato);
@@ -1581,26 +1624,24 @@ async function gI(periodo,formato){
   }else body.push(vacio('Sin visitas técnicas registradas en el período.'));
 
   // ---------- Secciones de actividades ----------
+  const fotoGrid=fs=>{const cw=Math.floor((W-200)/2);const pxW=250;const rows=[];
+    for(let i=0;i<fs.length;i+=2){rows.push(new D.TableRow({cantSplit:true,children:[fs[i],fs[i+1]].map(f=>{
+      const ratio=(f.h||3)/(f.w||4);const boxH=190;const hh=Math.min(boxH,Math.round(pxW*ratio));const ww=Math.round(hh/ratio);
+      return cell(par(img(f.data,ww,hh),{alignment:D.AlignmentType.CENTER,spacing:{after:0}}),{width:{size:cw,type:D.WidthType.DXA},margins:{top:60,bottom:60,left:60,right:60}})})}))}
+    return new D.Table({rows,width:{size:W,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,alignment:D.AlignmentType.CENTER})};
   ACT_SECCIONES.forEach(sec=>{
-    const lista=acts[sec.key]||[],fs=fotos[sec.key]||[];
+    const lista=acts[sec.key]||[];
     body.push(secTitle(sec.label));
-    if(!lista.length&&!fs.length){body.push(vacio('Sin actividades registradas en el período.'));return}
-    lista.forEach(a=>{
+    if(!lista.length){body.push(vacio('Sin actividades registradas en el período.'));return}
+    lista.forEach((a,ai)=>{
+      if(a.titulo&&a.titulo.trim())body.push(par(run(a.titulo.trim().toUpperCase(),{bold:true,size:20,color:NAVY}),{spacing:{before:ai?160:40,after:40},keepNext:true}));
       const partes=[];if(a.fecha)partes.push(fmtLargo(a.fecha));if(a.lugar)partes.push(a.lugar.trim());if(!esSem&&a.semana)partes.push('Semana '+a.semana);
       if(partes.length)body.push(meta(partes.join('   ·   ')));
-      a.texto.trim().split(/\n+/).filter(l=>l.trim()).forEach(l=>body.push(texto(l,{spacing:{after:160}})));
+      (a.texto||'').trim().split(/\n+/).filter(l=>l.trim()).forEach(l=>body.push(texto(l,{spacing:{after:120}})));
+      const fs=a.fotos||[];
+      if(fs.length){body.push(fotoGrid(fs));body.push(par(run('Registro fotográfico · '+(a.titulo&&a.titulo.trim()?a.titulo.trim():sec.label),{size:16,italics:true,color:GRAY}),{alignment:D.AlignmentType.CENTER,spacing:{before:40,after:200}}))}
+      else body.push(par(run(''),{spacing:{after:80}}));
     });
-    if(fs.length){
-      const cw=Math.floor((W-200)/2);const pxW=250;
-      const rows=[];
-      for(let i=0;i<fs.length;i+=2){
-        rows.push(new D.TableRow({cantSplit:true,children:[fs[i],fs[i+1]].map(f=>{
-          const ratio=(f.h||3)/(f.w||4);const boxH=190;const hh=Math.min(boxH,Math.round(pxW*ratio));const ww=Math.round(hh/ratio);
-          return cell(par(img(f.data,ww,hh),{alignment:D.AlignmentType.CENTER,spacing:{after:0}}),{width:{size:cw,type:D.WidthType.DXA},margins:{top:60,bottom:60,left:60,right:60}})})}));
-      }
-      body.push(new D.Table({rows,width:{size:W,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,alignment:D.AlignmentType.CENTER}));
-      body.push(par(run('Registro fotográfico · '+sec.label,{size:16,italics:true,color:GRAY}),{alignment:D.AlignmentType.CENTER,spacing:{before:60,after:200}}));
-    }
   });
 
   // ---------- Firmas ----------
@@ -1631,7 +1672,7 @@ async function gI(periodo,formato){
     cell(new D.Paragraph({alignment:D.AlignmentType.RIGHT,spacing:{after:0},children:[run('Página ',{size:14,color:GRAY}),new D.TextRun({children:[D.PageNumber.CURRENT],font:F,size:14,color:GRAY}),run(' de ',{size:14,color:GRAY}),new D.TextRun({children:[D.PageNumber.TOTAL_PAGES],font:F,size:14,color:GRAY})]}),{width:{size:2900,type:D.WidthType.DXA},margins:{top:0,bottom:0,left:0,right:0},borders:{...noB,top:{style:D.BorderStyle.SINGLE,size:4,color:LINE}}})
   ]})]})]});
 
-  const semData=esSem?JSON.stringify({tipo:'prodesal_semana',semana:w,anio:2026,asesor:cfg.abr,acts:Object.fromEntries(ACT_SECCIONES.map(x=>[x.key,getActList('sem'+w+'_2026',x.key)]))}):'';
+  const semData=esSem?JSON.stringify({tipo:'prodesal_semana',semana:w,anio:2026,asesor:cfg.abr,acts:Object.fromEntries(ACT_SECCIONES.map(x=>[x.key,getActList('sem'+w+'_2026',x.key).map(a=>({id:a.id,titulo:a.titulo,fecha:a.fecha,lugar:a.lugar,texto:a.texto}))]))}):'';
   const docObj=new D.Document({
     description:semData,creator:asesorNombre,title:fn,
     styles:{default:{document:{run:{font:F,size:20}}}},
@@ -1726,7 +1767,7 @@ function gPDF(periodo,tipo){
   const css='<style>@page{size:'+(tipo==='xls'?'letter landscape':'letter')+';margin:1.6cm 1.7cm 1.5cm}body{font-family:Calibri,"Segoe UI",Arial,sans-serif;font-size:10pt;color:#262626;margin:0;line-height:1.38}'
     +(tipo==='xls'
       ?'table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 7px;vertical-align:top}.ti{background:#5B9BD5;color:#fff;font-weight:bold;text-align:center;padding:8px}.sc{background:#DEEBF6;font-weight:bold}.th{background:#D6E4F0;font-weight:bold;text-align:center;font-size:9pt}.c{text-align:center}td.c{vertical-align:middle}pre{white-space:pre-wrap;font:inherit;margin:0}'
-      :'.kicker{font-size:8.5pt;font-weight:bold;letter-spacing:.22em;text-transform:uppercase;color:#2E75B6;margin-top:6px}h1{font-size:23pt;color:#1F3864;margin:2px 0 2px;font-weight:bold}.sub{color:#595959;font-size:9pt;margin-bottom:14px}table{border-collapse:collapse;width:100%}.ficha th{width:30%;text-align:left;font-size:8pt;letter-spacing:.08em;text-transform:uppercase;color:#595959;background:#F2F5F9;padding:5px 8px;border-bottom:2px solid #fff}.ficha td{padding:5px 8px;color:#1F3864;border-bottom:1px solid #BFC7D1}h2{display:flex;align-items:baseline;gap:8px;font-size:11pt;letter-spacing:.1em;text-transform:uppercase;color:#1F3864;border-bottom:1.2px solid #2E75B6;padding-bottom:3px;margin:20px 0 8px;page-break-after:avoid}h2 span{color:#2E75B6;font-size:12pt}h3{font-size:10.5pt;color:#1F3864;margin:14px 0 5px;page-break-after:avoid}.j{text-align:justify;margin:0 0 7px}.vis th{background:#1F3864;color:#fff;font-size:8pt;letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:5px 6px}.vis td{padding:4px 6px;border-bottom:1px solid #BFC7D1;font-size:9pt}.vis tr:nth-child(even) td{background:#F2F5F9}.c{text-align:center}.mt{color:#595959;font-size:8pt}.obs b{color:#1F3864}.meta{font-size:8pt;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:#595959;margin:8px 0 3px;page-break-after:avoid}.vac{color:#595959;font-style:italic;font-size:9pt}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 2px}.grid img{width:100%;max-height:7cm;object-fit:cover;border:1px solid #BFC7D1;border-radius:3px;page-break-inside:avoid}.cap{text-align:center;font-size:8pt;font-style:italic;color:#595959;margin-bottom:10px}.firmas{margin-top:34px;page-break-inside:avoid}.firmas td{width:33%;text-align:center;vertical-align:bottom;padding:0 12px}.firmas .ln{border-top:1.2px solid #1F3864;margin:36px 0 5px}.firmas b{color:#1F3864;font-size:9pt}.firmas span{color:#595959;font-size:8pt}')
+      :'.kicker{font-size:8.5pt;font-weight:bold;letter-spacing:.22em;text-transform:uppercase;color:#2E75B6;margin-top:6px}h1{font-size:23pt;color:#1F3864;margin:2px 0 2px;font-weight:bold}.sub{color:#595959;font-size:9pt;margin-bottom:14px}table{border-collapse:collapse;width:100%}.ficha th{width:30%;text-align:left;font-size:8pt;letter-spacing:.08em;text-transform:uppercase;color:#595959;background:#F2F5F9;padding:5px 8px;border-bottom:2px solid #fff}.ficha td{padding:5px 8px;color:#1F3864;border-bottom:1px solid #BFC7D1}h2{display:flex;align-items:baseline;gap:8px;font-size:11pt;letter-spacing:.1em;text-transform:uppercase;color:#1F3864;border-bottom:1.2px solid #2E75B6;padding-bottom:3px;margin:20px 0 8px;page-break-after:avoid}h2 span{color:#2E75B6;font-size:12pt}h3{font-size:10.5pt;color:#1F3864;margin:14px 0 5px;page-break-after:avoid}.j{text-align:justify;margin:0 0 7px}.vis th{background:#1F3864;color:#fff;font-size:8pt;letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:5px 6px}.vis td{padding:4px 6px;border-bottom:1px solid #BFC7D1;font-size:9pt}.vis tr:nth-child(even) td{background:#F2F5F9}.c{text-align:center}.mt{color:#595959;font-size:8pt}.obs b{color:#1F3864}.act{margin-bottom:10px}.tit{font-weight:bold;color:#1F3864;margin-top:8px;page-break-after:avoid}.meta{font-size:8pt;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:#595959;margin:8px 0 3px;page-break-after:avoid}.vac{color:#595959;font-style:italic;font-size:9pt}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 2px}.grid img{width:100%;max-height:7cm;object-fit:cover;border:1px solid #BFC7D1;border-radius:3px;page-break-inside:avoid}.cap{text-align:center;font-size:8pt;font-style:italic;color:#595959;margin-bottom:10px}.firmas{margin-top:34px;page-break-inside:avoid}.firmas td{width:33%;text-align:center;vertical-align:bottom;padding:0 12px}.firmas .ln{border-top:1.2px solid #1F3864;margin:36px 0 5px}.firmas b{color:#1F3864;font-size:9pt}.firmas span{color:#595959;font-size:8pt}')
     +'.hd{display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid '+(tipo==='xls'?'#5B9BD5':'#1F3864')+';padding-bottom:5px;margin-bottom:10px}.ft{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-between;font-size:7pt;color:#595959;border-top:1px solid #BFC7D1;padding-top:3px}.bar{position:fixed;top:0;left:0;right:0;background:#1f2937;color:#fff;padding:8px;text-align:center;font-family:Arial;font-size:13px;z-index:9}.bar b{cursor:pointer;background:#22c55e;padding:5px 12px;border-radius:5px;margin-left:8px}@media print{.bar,.bar-sp{display:none}}</style>';
   const head='<div class="hd"><img src="'+LOGO_INDAP+'" width="130" height="65"><img src="'+LOGO_PEUMO+'" width="190" height="36"></div>';
   const bar='<div class="bar">Vista previa — en el diálogo de impresión elige <u>Guardar como PDF</u> <b onclick="window.print()">🖨️ Imprimir / PDF</b></div><div class="bar-sp" style="height:38px"></div>';
@@ -1764,12 +1805,13 @@ function gPDF(periodo,tipo){
       if(obs.length) html+='<h3>Observaciones técnicas</h3>'+obs.map(v=>'<p class="j obs"><b>'+esc(v.agricultor)+'</b><span class="mt"> · '+esc(fmtLargo(v.fecha))+'</span><br>'+esc(v.observacion.trim())+'</p>').join('');
     }else html+='<p class="vac">Sin visitas técnicas registradas en el período.</p>';
     ACT_SECCIONES.forEach(s=>{
-      const lista=acts[s.key]||[],fs=fotos[s.key]||[];
+      const lista=acts[s.key]||[];
       html+=sec(s.label);
-      if(!lista.length&&!fs.length){html+='<p class="vac">Sin actividades registradas en el período.</p>';return}
+      if(!lista.length){html+='<p class="vac">Sin actividades registradas en el período.</p>';return}
       lista.forEach(a=>{const partes=[];if(a.fecha)partes.push(fmtLargo(a.fecha));if(a.lugar)partes.push(a.lugar.trim());if(!esSem&&a.semana)partes.push('Semana '+a.semana);
-        html+=(partes.length?'<div class="meta">'+esc(partes.join('   ·   '))+'</div>':'')+parrafos(a.texto)});
-      if(fs.length) html+='<div class="grid">'+fs.map(f=>'<img src="'+f.data+'">').join('')+'</div><div class="cap">Registro fotográfico · '+esc(s.label)+'</div>';
+        html+='<div class="act">'+(a.titulo&&a.titulo.trim()?'<div class="tit">'+esc(a.titulo.trim().toUpperCase())+'</div>':'')+(partes.length?'<div class="meta">'+esc(partes.join('   ·   '))+'</div>':'')+parrafos(a.texto||'');
+        const fs=a.fotos||[];if(fs.length) html+='<div class="grid">'+fs.map(f=>'<img src="'+f.data+'">').join('')+'</div><div class="cap">Registro fotográfico · '+esc(a.titulo&&a.titulo.trim()?a.titulo.trim():s.label)+'</div>';
+        html+='</div>'});
     });
     html+='<table class="firmas"><tr>'+[[asesorNombre,asesorCargo,'Programa PRODESAL Peumo'],[cfg.coord||'',cfg.cCoord||'Coordinador Programa PRODESAL',''],[cfg.contra||'',cfg.cContra||'Contraparte Entidad Ejecutora',cfg.depto||'']]
       .map(([nm,c,d])=>'<td><div class="ln"></div><b>'+esc(nm.toUpperCase())+'</b><br><span>'+esc(c)+(d?'<br>'+esc(d):'')+'</span></td>').join('')+'</tr></table>';

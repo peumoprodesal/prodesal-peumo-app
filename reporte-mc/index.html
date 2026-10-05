@@ -567,7 +567,7 @@ function agruparPorRubro() {
     const t = u.ventas.reduce((a,b)=>a+b, 0);
     if (t <= 0) return;
     let rb = ((u.rubro || '').toString().trim());
-    if (!rb || /^-?\d+([.,]\d+)?$/.test(rb)) rb = 'Sin rubro'; // ignora rubros vacíos o numéricos
+    if (!rb || /^-?\d+([.,]\d+)?$/.test(rb)) return; // descarta rubros vacíos o numéricos (filas basura)
     map[rb] = (map[rb] || 0) + t;
   });
   const arr = Object.entries(map).sort((a,b) => b[1]-a[1]);

@@ -290,21 +290,26 @@
 
     <div class="section">
       <div class="section-head">
+        <h2>Observaciones del período</h2>
+      </div>
+      <div class="narrative">
+        <p id="narrativa-1"></p>
+        <p id="narrativa-2"></p>
+      </div>
+    </div>
+
+    <div class="section internal-only">
+      <div class="section-head">
         <h2>Detalle por feria</h2>
-        <div class="note">Totales de cada jornada del Mercado Campesino</div>
+        <div class="note">Totales de cada jornada · uso interno</div>
       </div>
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Feria</th><th>Fecha</th><th>Día</th><th class="num">Participantes</th><th class="num">Ventas (CLP)</th></tr>
+            <tr><th>Feria</th><th>Fecha</th><th>Día</th><th class="num">Vendedores</th><th class="num">Ventas (CLP)</th></tr>
           </thead>
           <tbody id="tabla-ferias"></tbody>
         </table>
-      </div>
-      <div class="narrative">
-        <h3>Observaciones del período</h3>
-        <p id="narrativa-1"></p>
-        <p id="narrativa-2"></p>
       </div>
     </div>
 
@@ -461,8 +466,8 @@ function renderTodo() {
 
   document.getElementById('kpis').innerHTML = `
     <div class="kpi"><div class="kpi-label">Ventas del período</div><div class="kpi-value">${CLP(c.totalVentas)}</div><div class="kpi-foot">${DATOS.ferias.length} ferias realizadas</div></div>
-    <div class="kpi"><div class="kpi-label">Promedio por feria</div><div class="kpi-value">${CLP(c.promedioFeria)}</div><div class="kpi-foot">${Math.round(c.promedioParticipantes)} participantes promedio</div></div>
-    <div class="kpi"><div class="kpi-label">Participaciones</div><div class="kpi-value">${c.totalParticipaciones}</div><div class="kpi-foot">${c.usuariosActivos.length} de ${DATOS.config.usuariosInscritos} usuarios activos</div></div>
+    <div class="kpi"><div class="kpi-label">Promedio por feria</div><div class="kpi-value">${CLP(c.promedioFeria)}</div><div class="kpi-foot">${Math.round(c.promedioParticipantes)} productores por feria (promedio)</div></div>
+    <div class="kpi"><div class="kpi-label">Usuarios activos</div><div class="kpi-value">${c.usuariosActivos.length} / ${DATOS.config.usuariosInscritos}</div><div class="kpi-foot">vendieron al menos una vez</div></div>
     <div class="kpi"><div class="kpi-label">Mejor feria</div><div class="kpi-value">${c.feriaTop ? fechaDM(c.feriaTop.fecha) : '—'}</div><div class="kpi-foot">${c.feriaTop ? CLP(c.feriaTop.ventas) : '—'}</div></div>
   `;
 
@@ -535,7 +540,7 @@ function renderMes(c) {
     type: 'bar',
     data: { labels: g.labels, datasets: [{ label:'Ventas', data: g.data, backgroundColor:'#4A5D23', borderRadius:2, barPercentage:0.6 }] },
     options: {
-      responsive:true, maintainAspectRatio:false,
+      responsive:true, maintainAspectRatio:false, animation:false,
       plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#2A2A28', padding:10, callbacks:{ label: ctx => CLP(ctx.parsed.y) }}},
       scales:{
         y:{ beginAtZero:true, ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K', font:{family:'Manrope',size:11}, color:'#6B6B66' }, grid:{color:'rgba(0,0,0,0.05)'}},
@@ -565,7 +570,7 @@ function renderRubro() {
     data: { labels: g.labels, datasets: [{ label:'Ventas', data: g.data, backgroundColor:'#6B7F3A', borderRadius:2 }] },
     options: {
       indexAxis: 'y',
-      responsive:true, maintainAspectRatio:false,
+      responsive:true, maintainAspectRatio:false, animation:false,
       plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#2A2A28', padding:10, callbacks:{ label: ctx => CLP(ctx.parsed.x) }}},
       scales:{
         x:{ beginAtZero:true, ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K', font:{family:'Manrope',size:11}, color:'#6B6B66' }, grid:{color:'rgba(0,0,0,0.05)'}},
@@ -585,7 +590,7 @@ function renderParticipacion(c) {
       datasets: [{ label:'Participantes', data: c.participantesPorFeria, borderColor:'#1F3A5F', backgroundColor:'rgba(31,58,95,0.08)', borderWidth:2, pointRadius:3, pointBackgroundColor:'#1F3A5F', fill:true, tension:0.25 }]
     },
     options: {
-      responsive:true, maintainAspectRatio:false,
+      responsive:true, maintainAspectRatio:false, animation:false,
       plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#2A2A28', padding:10, callbacks:{ title: items => 'Feria del ' + items[0].label, label: ctx => ctx.parsed.y + ' productores' }}},
       scales:{
         y:{ beginAtZero:true, ticks:{ precision:0, font:{family:'Manrope',size:11}, color:'#6B6B66' }, grid:{color:'rgba(0,0,0,0.05)'}},
@@ -613,7 +618,7 @@ function renderTop(c) {
     data: { labels: top.map(u => u.nombre), datasets: [{ label:'Ventas', data: top.map(u => u.total), backgroundColor:'#C9971F', borderRadius:2 }] },
     options: {
       indexAxis: 'y',
-      responsive:true, maintainAspectRatio:false,
+      responsive:true, maintainAspectRatio:false, animation:false,
       plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#2A2A28', padding:10, callbacks:{ label: ctx => CLP(ctx.parsed.x) }}},
       scales:{
         x:{ beginAtZero:true, ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K', font:{family:'Manrope',size:11}, color:'#6B6B66' }, grid:{color:'rgba(0,0,0,0.05)'}},

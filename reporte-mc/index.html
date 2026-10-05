@@ -83,6 +83,9 @@
   thead tr { background: var(--olive-soft); }
   th { font-family: 'Manrope', sans-serif; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--olive-deep); padding: 12px 14px; text-align: left; white-space: nowrap; }
   th.num { text-align: right; } th.center { text-align: center; }
+  th.sortable { cursor: pointer; user-select: none; }
+  th.sortable:hover { color: var(--terracota); }
+  .sort-ind { font-size: 10px; color: var(--terracota); }
   td { padding: 12px 14px; border-top: 1px solid var(--line-soft); vertical-align: top; }
   td.num { text-align: right; font-variant-numeric: tabular-nums; }
   td.center { text-align: center; }
@@ -343,12 +346,22 @@
     <div class="section internal-only">
       <div class="section-head">
         <h2>Detalle por usuario</h2>
-        <div class="note">Ranking por ventas acumuladas del período</div>
+        <div class="note">Haz clic en un título para ordenar</div>
       </div>
+      <input type="text" id="user-search" placeholder="Buscar por nombre, RUT o rubro..." oninput="renderUsuarios()"
+             style="width:100%;max-width:360px;padding:10px 12px;border:1px solid var(--line);border-radius:2px;font-family:'Manrope',sans-serif;font-size:14px;margin-bottom:12px;">
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Usuario</th><th>RUT</th><th>Rubro</th><th class="num">Ferias</th><th class="num">Total ($)</th><th class="center">Carta</th><th class="center">SII</th></tr>
+            <tr>
+              <th class="sortable" onclick="ordenarUsuarios('nombre')">Usuario <span class="sort-ind" data-k="nombre"></span></th>
+              <th class="sortable" onclick="ordenarUsuarios('rut')">RUT <span class="sort-ind" data-k="rut"></span></th>
+              <th class="sortable" onclick="ordenarUsuarios('rubro')">Rubro <span class="sort-ind" data-k="rubro"></span></th>
+              <th class="num sortable" onclick="ordenarUsuarios('ferias')">Ferias <span class="sort-ind" data-k="ferias"></span></th>
+              <th class="num sortable" onclick="ordenarUsuarios('total')">Total ($) <span class="sort-ind" data-k="total"></span></th>
+              <th class="center sortable" onclick="ordenarUsuarios('carta')">Carta <span class="sort-ind" data-k="carta"></span></th>
+              <th class="center sortable" onclick="ordenarUsuarios('sii')">SII <span class="sort-ind" data-k="sii"></span></th>
+            </tr>
           </thead>
           <tbody id="tabla-usuarios"></tbody>
         </table>
@@ -462,7 +475,13 @@ function renderTodo() {
   // se colaban como "rubros" falsos (los números 15, 1, 8, -2) o inflaban conteos.
   if (DATOS && Array.isArray(DATOS.usuarios)) {
     DATOS.usuarios = DATOS.usuarios.filter(function (u) {
-      return u && (u.apellidos || '').toString().trim() !== '' && (u.rut || '').toString().trim() !== '';
+      if (!u) return false;
+      var ape = (u.apellidos || '').toString().trim();
+      var rut = (u.rut || '').toString().trim();
+      // Un agricultor real tiene apellido y un RUT válido (ej. 10123280-8),
+      // no un "1" suelto. Esto descarta filas duplicadas/corruptas.
+      var rutValido = /\d{6,}/.test(rut) && rut.indexOf('-') >= 0;
+      return ape !== '' && rutValido;
     });
     if (DATOS.config) DATOS.config.usuariosInscritos = DATOS.usuarios.length;
   }
@@ -650,23 +669,55 @@ function renderAlertas(c) {
   `;
 }
 
+let userSort = { key: 'total', dir: -1 };
+function ordenarUsuarios(key) {
+  if (userSort.key === key) { userSort.dir = -userSort.dir; }
+  else { userSort.key = key; userSort.dir = (key === 'nombre' || key === 'rubro' || key === 'rut') ? 1 : -1; }
+  renderUsuarios();
+}
 function renderUsuarios() {
-  const ordenados = [...DATOS.usuarios].sort((a,b) => b.ventas.reduce((x,y)=>x+y,0) - a.ventas.reduce((x,y)=>x+y,0));
-  let html = '';
-  ordenados.forEach(u => {
+  const q = (document.getElementById('user-search') ? document.getElementById('user-search').value : '').toLowerCase().trim();
+  const base = DATOS.usuarios.map(u => {
     const total = u.ventas.reduce((a,b)=>a+b, 0);
     const ferias = u.ventas.filter(v => v>0).length;
+    return { u: u, total: total, ferias: ferias };
+  });
+  let filas = base.filter(x => {
+    if (!q) return true;
+    return ((x.u.apellidos||'') + ' ' + (x.u.nombres||'') + ' ' + (x.u.rut||'') + ' ' + (x.u.rubro||'')).toLowerCase().indexOf(q) >= 0;
+  });
+  const k = userSort.key, dir = userSort.dir;
+  filas.sort((a,b) => {
+    let va, vb;
+    if (k === 'nombre') { va = (a.u.apellidos||'').toLowerCase(); vb = (b.u.apellidos||'').toLowerCase(); }
+    else if (k === 'rut') { va = (a.u.rut||''); vb = (b.u.rut||''); }
+    else if (k === 'rubro') { va = (a.u.rubro||'').toLowerCase(); vb = (b.u.rubro||'').toLowerCase(); }
+    else if (k === 'ferias') { va = a.ferias; vb = b.ferias; }
+    else if (k === 'total') { va = a.total; vb = b.total; }
+    else if (k === 'carta') { va = (a.u.carta==='si'?1:0); vb = (b.u.carta==='si'?1:0); }
+    else if (k === 'sii') { va = (a.u.sii==='si'?1:0); vb = (b.u.sii==='si'?1:0); }
+    if (va < vb) return -1*dir;
+    if (va > vb) return 1*dir;
+    return 0;
+  });
+  let html = '';
+  filas.forEach(x => {
+    const u = x.u;
     html += `<tr>
       <td><div class="user-name">${u.apellidos}</div><div class="user-rubro">${u.nombres}</div></td>
       <td style="font-family:monospace; font-size:12px;">${u.rut}</td>
       <td style="font-size:12px;">${u.rubro}</td>
-      <td class="num">${ferias}</td>
-      <td class="num ${total===0?'zero':''}">${total === 0 ? '—' : CLP(total)}</td>
+      <td class="num">${x.ferias}</td>
+      <td class="num ${x.total===0?'zero':''}">${x.total === 0 ? '—' : CLP(x.total)}</td>
       <td class="center"><span class="pill ${u.carta==='si'?'ok':'alert'}">${u.carta==='si'?'OK':'NO'}</span></td>
       <td class="center"><span class="pill ${u.sii==='si'?'ok':'alert'}">${u.sii==='si'?'OK':'NO'}</span></td>
     </tr>`;
   });
   document.getElementById('tabla-usuarios').innerHTML = html;
+  // indicadores de orden en los encabezados
+  document.querySelectorAll('.sort-ind').forEach(el => {
+    el.textContent = (el.getAttribute('data-k') === userSort.key) ? (userSort.dir === 1 ? '▲' : '▼') : '';
+  });
 }
 
 // === Autenticación ===

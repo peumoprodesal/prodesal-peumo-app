@@ -457,6 +457,15 @@ function calcular() {
 
 // === Render ===
 function renderTodo() {
+  // Limpieza: ignorar filas que no sean un agricultor real (sin apellido).
+  // Esto elimina filas sueltas/vacías que pudieran quedar bajo la tabla y que
+  // se colaban como "rubros" falsos (los números 15, 1, 8, -2) o inflaban conteos.
+  if (DATOS && Array.isArray(DATOS.usuarios)) {
+    DATOS.usuarios = DATOS.usuarios.filter(function (u) {
+      return u && (u.apellidos || '').toString().trim() !== '' && (u.rut || '').toString().trim() !== '';
+    });
+    if (DATOS.config) DATOS.config.usuariosInscritos = DATOS.usuarios.length;
+  }
   const c = calcular();
   document.getElementById('hero-period').textContent = DATOS.config.mes || '—';
   document.getElementById('period-range').textContent = DATOS.config.periodoTexto || '—';
@@ -554,9 +563,11 @@ function renderMes(c) {
 function agruparPorRubro() {
   const map = {};
   DATOS.usuarios.forEach(u => {
+    if (!(u.apellidos || '').toString().trim()) return; // solo agricultores reales
     const t = u.ventas.reduce((a,b)=>a+b, 0);
     if (t <= 0) return;
-    const rb = ((u.rubro || '').trim()) || 'Sin rubro';
+    let rb = ((u.rubro || '').toString().trim());
+    if (!rb || /^-?\d+([.,]\d+)?$/.test(rb)) rb = 'Sin rubro'; // ignora rubros vacíos o numéricos
     map[rb] = (map[rb] || 0) + t;
   });
   const arr = Object.entries(map).sort((a,b) => b[1]-a[1]);

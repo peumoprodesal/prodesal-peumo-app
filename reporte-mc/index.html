@@ -71,6 +71,12 @@
   .chart-legend span { display: flex; align-items: center; gap: 6px; }
   .chart-legend .swatch { width: 12px; height: 12px; border-radius: 2px; }
   .chart-canvas-wrap { position: relative; height: 300px; }
+  .chart-canvas-wrap.h380 { height: 380px; }
+  .chart-canvas-wrap.h460 { height: 460px; }
+
+  /* Fila de dos gráficos lado a lado */
+  .chart-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  @media (max-width: 820px) { .chart-grid-2 { grid-template-columns: 1fr; } }
 
   .table-wrap { background: var(--white); border: 1px solid var(--line-soft); overflow-x: auto; }
   table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 600px; }
@@ -119,6 +125,7 @@
   .alert-card { padding: 16px 18px; border-left: 3px solid; background: var(--white); border-top: 1px solid var(--line-soft); border-right: 1px solid var(--line-soft); border-bottom: 1px solid var(--line-soft); }
   .alert-card.warning { border-left-color: var(--terracota); }
   .alert-card.info { border-left-color: var(--navy); }
+  .alert-card.good { border-left-color: var(--olive); }
   .alert-card .alert-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; color: var(--ink-soft); font-weight: 600; margin-bottom: 4px; }
   .alert-card .alert-value { font-family: 'Manrope', sans-serif; font-size: 24px; font-weight: 500; margin-bottom: 4px; }
   .alert-card .alert-detail { font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
@@ -247,6 +254,42 @@
 
     <div class="section">
       <div class="section-head">
+        <h2>Ventas por mes</h2>
+        <div class="note">Las ferias semanales agrupadas por mes</div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-canvas-wrap">
+          <canvas id="mesChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>Ventas por rubro</h2>
+        <div class="note">Aporte de cada rubro al total del período</div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-canvas-wrap h380">
+          <canvas id="rubroChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
+        <h2>Participación por feria</h2>
+        <div class="note">Número de productores que vendieron en cada jornada</div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-canvas-wrap">
+          <canvas id="participacionChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">
         <h2>Detalle por feria</h2>
         <div class="note">Totales de cada jornada del Mercado Campesino</div>
       </div>
@@ -271,6 +314,25 @@
         <div class="note">Información interna del equipo</div>
       </div>
       <div class="alerts-grid" id="alerts-grid"></div>
+    </div>
+
+    <div class="section internal-only">
+      <div class="section-head">
+        <h2>Top agricultores y concentración</h2>
+        <div class="note">Quiénes más venden y cuán repartido está el mercado</div>
+      </div>
+      <div class="alerts-grid" style="margin-bottom:16px">
+        <div class="alert-card info">
+          <div class="alert-label">Concentración (top 5)</div>
+          <div class="alert-value" id="conc-valor">—</div>
+          <div class="alert-detail" id="conc-detalle"></div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <div class="chart-canvas-wrap h460">
+          <canvas id="topChart"></canvas>
+        </div>
+      </div>
     </div>
 
     <div class="section internal-only">
@@ -332,6 +394,7 @@ const CONFIG = {
 
 let DATOS = null;
 let chart = null;
+let chartMes = null, chartRubro = null, chartPart = null, chartTop = null;
 
 const CLP = n => '$' + Math.round(n).toLocaleString('es-CL');
 const fechaDM = iso => { const d = new Date(iso+'T12:00:00'); return String(d.getDate()).padStart(2,'0')+'/'+String(d.getMonth()+1).padStart(2,'0'); };
@@ -417,9 +480,13 @@ function renderTodo() {
   }
 
   renderChart(c);
+  renderMes(c);
+  renderRubro();
+  renderParticipacion(c);
   if (document.body.classList.contains('equipo')) {
     renderAlertas(c);
     renderUsuarios();
+    renderTop(c);
   }
 }
 
@@ -440,7 +507,117 @@ function renderChart(c) {
         callbacks:{ title: items => 'Feria del ' + items[0].label, label: ctx => ctx.dataset.label + ': ' + CLP(ctx.parsed.y) }}},
       scales:{
         y:{ beginAtZero:true, ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K', font:{family:'Manrope',size:11}, color:'#6B6B66' }, grid:{color:'rgba(0,0,0,0.05)'}},
-        x:{ ticks:{ font:{family:'Manrope',size:12,weight:'500'}, color:'#2A2A28', autoSkip:false, maxRotation:0 }, grid:{display:false}}
+        x:{ ticks:{ font:{family:'Manrope',size:12,weight:'500'}, color:'#2A2A28', autoSkip:true, maxRotation:0 }, grid:{display:false}}
+      }
+    }
+  });
+}
+
+// === Ventas por mes ===
+function agruparPorMes(c) {
+  const M = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  const map = {}; const orden = [];
+  DATOS.ferias.forEach((f,i) => {
+    const key = (f.fecha || '').slice(0,7); // yyyy-mm
+    if (!(key in map)) { map[key] = 0; orden.push(key); }
+    map[key] += c.totalesPorFeria[i];
+  });
+  orden.sort();
+  return {
+    labels: orden.map(k => { const p = k.split('-'); return M[Number(p[1])-1] + ' ' + p[0].slice(2); }),
+    data: orden.map(k => map[k])
+  };
+}
+function renderMes(c) {
+  const g = agruparPorMes(c);
+  if (chartMes) chartMes.destroy();
+  chartMes = new Chart(document.getElementById('mesChart'), {
+    type: 'bar',
+    data: { labels: g.labels, datasets: [{ label:'Ventas', data: g.data, backgroundColor:'#4A5D23', borderRadius:2, barPercentage:0.6 }] },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#2A2A28', padding:10, callbacks:{ label: ctx => CLP(ctx.parsed.y) }}},
+      scales:{
+        y:{ beginAtZero:true, ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K', font:{family:'Manrope',size:11}, color:'#6B6B66' }, grid:{color:'rgba(0,0,0,0.05)'}},
+        x:{ ticks:{ font:{family:'Manrope',size:12,weight:'500'}, color:'#2A2A28' }, grid:{display:false}}
+      }
+    }
+  });
+}
+
+// === Ventas por rubro ===
+function agruparPorRubro() {
+  const map = {};
+  DATOS.usuarios.forEach(u => {
+    const t = u.ventas.reduce((a,b)=>a+b, 0);
+    if (t <= 0) return;
+    const rb = ((u.rubro || '').trim()) || 'Sin rubro';
+    map[rb] = (map[rb] || 0) + t;
+  });
+  const arr = Object.entries(map).sort((a,b) => b[1]-a[1]);
+  return { labels: arr.map(x => x[0]), data: arr.map(x => x[1]) };
+}
+function renderRubro() {
+  const g = agruparPorRubro();
+  if (chartRubro) chartRubro.destroy();
+  chartRubro = new Chart(document.getElementById('rubroChart'), {
+    type: 'bar',
+    data: { labels: g.labels, datasets: [{ label:'Ventas', data: g.data, backgroundColor:'#6B7F3A', borderRadius:2 }] },
+    options: {
+      indexAxis: 'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#2A2A28', padding:10, callbacks:{ label: ctx => CLP(ctx.parsed.x) }}},
+      scales:{
+        x:{ beginAtZero:true, ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K', font:{family:'Manrope',size:11}, color:'#6B6B66' }, grid:{color:'rgba(0,0,0,0.05)'}},
+        y:{ ticks:{ font:{family:'Manrope',size:12}, color:'#2A2A28' }, grid:{display:false}}
+      }
+    }
+  });
+}
+
+// === Participación por feria ===
+function renderParticipacion(c) {
+  if (chartPart) chartPart.destroy();
+  chartPart = new Chart(document.getElementById('participacionChart'), {
+    type: 'line',
+    data: {
+      labels: DATOS.ferias.map(f => fechaDM(f.fecha)),
+      datasets: [{ label:'Participantes', data: c.participantesPorFeria, borderColor:'#1F3A5F', backgroundColor:'rgba(31,58,95,0.08)', borderWidth:2, pointRadius:3, pointBackgroundColor:'#1F3A5F', fill:true, tension:0.25 }]
+    },
+    options: {
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#2A2A28', padding:10, callbacks:{ title: items => 'Feria del ' + items[0].label, label: ctx => ctx.parsed.y + ' productores' }}},
+      scales:{
+        y:{ beginAtZero:true, ticks:{ precision:0, font:{family:'Manrope',size:11}, color:'#6B6B66' }, grid:{color:'rgba(0,0,0,0.05)'}},
+        x:{ ticks:{ font:{family:'Manrope',size:11}, color:'#2A2A28', autoSkip:true, maxRotation:0 }, grid:{display:false}}
+      }
+    }
+  });
+}
+
+// === Top agricultores + concentración (interno) ===
+function renderTop(c) {
+  const ord = DATOS.usuarios.map(u => ({ nombre: u.apellidos || u.rut, total: u.ventas.reduce((a,b)=>a+b,0) }))
+                            .filter(u => u.total > 0)
+                            .sort((a,b) => b.total - a.total);
+  const top = ord.slice(0, 10);
+  const top5 = ord.slice(0, 5).reduce((a,b) => a + b.total, 0);
+  const pct = c.totalVentas ? Math.round(top5 / c.totalVentas * 100) : 0;
+  const cv = document.getElementById('conc-valor');
+  const cd = document.getElementById('conc-detalle');
+  if (cv) cv.textContent = pct + '%';
+  if (cd) cd.innerHTML = 'Los 5 que más venden aportan <strong>' + CLP(top5) + '</strong> de ' + CLP(c.totalVentas);
+  if (chartTop) chartTop.destroy();
+  chartTop = new Chart(document.getElementById('topChart'), {
+    type: 'bar',
+    data: { labels: top.map(u => u.nombre), datasets: [{ label:'Ventas', data: top.map(u => u.total), backgroundColor:'#C9971F', borderRadius:2 }] },
+    options: {
+      indexAxis: 'y',
+      responsive:true, maintainAspectRatio:false,
+      plugins:{ legend:{display:false}, tooltip:{ backgroundColor:'#2A2A28', padding:10, callbacks:{ label: ctx => CLP(ctx.parsed.x) }}},
+      scales:{
+        x:{ beginAtZero:true, ticks:{ callback:v=>'$'+(v/1000).toFixed(0)+'K', font:{family:'Manrope',size:11}, color:'#6B6B66' }, grid:{color:'rgba(0,0,0,0.05)'}},
+        y:{ ticks:{ font:{family:'Manrope',size:12}, color:'#2A2A28' }, grid:{display:false}}
       }
     }
   });
@@ -484,7 +661,7 @@ function aplicarVistaEquipo() {
   document.getElementById('btn-acceso').textContent = 'Volver a vista regional';
   document.getElementById('btn-acceso').onclick = salirVistaEquipo;
   document.getElementById('btn-download-text').textContent = 'Descargar planilla completa (.xlsx)';
-  if (DATOS) { const c = calcular(); renderAlertas(c); renderUsuarios(); }
+  if (DATOS) { const c = calcular(); renderAlertas(c); renderUsuarios(); renderTop(c); }
 }
 function autenticar() {
   if (document.getElementById('clave-input').value === CONFIG.claveEquipo) {
@@ -508,7 +685,6 @@ function descargarExcel() {
   const nDias = DATOS.ferias.length;
 
   // Hoja 1: Aporte regional (formato planilla Las Cabras)
-  // Una columna por feria con la fecha como encabezado (cada feria semanal es un día)
   const headers1 = ['N°','Región','Nombre del Mercado','Comuna'];
   DATOS.ferias.forEach(f => headers1.push(fechaCompleta(f.fecha)));
   headers1.push('TOTAL PERÍODO');
@@ -536,7 +712,27 @@ function descargarExcel() {
   ws2['!merges'] = [{s:{r:0,c:0},e:{r:0,c:4}},{s:{r:1,c:0},e:{r:1,c:4}}];
   XLSX.utils.book_append_sheet(wb, ws2, 'Detalle ferias');
 
-  // Hoja 3: Resumen
+  // Hoja 3: Ventas por mes
+  const gMes = agruparPorMes(c);
+  const mesAoa = [['VENTAS POR MES · MERCADO CAMPESINO PEUMO'],['Período: '+DATOS.config.periodoTexto],[],['Mes','Ventas (CLP)']];
+  gMes.labels.forEach((l,i) => mesAoa.push([l, gMes.data[i]]));
+  mesAoa.push(['TOTAL', c.totalVentas]);
+  const wsMes = XLSX.utils.aoa_to_sheet(mesAoa);
+  wsMes['!cols'] = [{wch:14},{wch:16}];
+  wsMes['!merges'] = [{s:{r:0,c:0},e:{r:0,c:1}},{s:{r:1,c:0},e:{r:1,c:1}}];
+  XLSX.utils.book_append_sheet(wb, wsMes, 'Por mes');
+
+  // Hoja 4: Ventas por rubro
+  const gRub = agruparPorRubro();
+  const rubAoa = [['VENTAS POR RUBRO · MERCADO CAMPESINO PEUMO'],['Período: '+DATOS.config.periodoTexto],[],['Rubro','Ventas (CLP)','% del total']];
+  gRub.labels.forEach((l,i) => rubAoa.push([l, gRub.data[i], c.totalVentas ? (gRub.data[i]/c.totalVentas*100).toFixed(1)+'%' : '']));
+  rubAoa.push(['TOTAL', c.totalVentas, '100%']);
+  const wsRub = XLSX.utils.aoa_to_sheet(rubAoa);
+  wsRub['!cols'] = [{wch:28},{wch:16},{wch:12}];
+  wsRub['!merges'] = [{s:{r:0,c:0},e:{r:0,c:2}},{s:{r:1,c:0},e:{r:1,c:2}}];
+  XLSX.utils.book_append_sheet(wb, wsRub, 'Por rubro');
+
+  // Hoja 5: Resumen
   const resumen = [
     ['RESUMEN EJECUTIVO · MERCADO CAMPESINO PEUMO'], ['Período: '+DATOS.config.periodoTexto], [],
     ['Indicador','Valor'],
@@ -559,7 +755,7 @@ function descargarExcel() {
   ws3['!merges'] = [{s:{r:0,c:0},e:{r:0,c:1}},{s:{r:1,c:0},e:{r:1,c:1}}];
   XLSX.utils.book_append_sheet(wb, ws3, 'Resumen');
 
-  // Hoja 4: Detalle usuarios (solo equipo)
+  // Hoja 6: Detalle usuarios (solo equipo)
   if (esEquipo) {
     const headerUser = ['Apellidos','Nombres','RUT','Rubro','Teléfono','Carta','SII'];
     DATOS.ferias.forEach(f => headerUser.push(fechaCompleta(f.fecha)));

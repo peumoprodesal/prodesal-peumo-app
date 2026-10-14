@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Metas de Visitas — PRODESAL Peumo</title>
+<style>
+:root{color-scheme:light;
+  --bg:#f3f5f8;--surface:#fcfcfb;--line:#e1e4ea;--text:#0b0b0b;--text2:#52514e;--muted:#8a8984;
+  --s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--s6:#8a8984;
+  --good:#0ca30c;--warn:#fab219;--serious:#ec835a;--crit:#d03b3b;--meta:#9a9a96;--accent:#1F3864}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){color-scheme:dark;
+  --bg:#121211;--surface:#1a1a19;--line:#2e2e2c;--text:#f0efec;--text2:#c3c2b7;--muted:#8d8c86;
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#8d8c86;--meta:#7b7b77;--accent:#9ec0ff}}
+:root[data-theme="dark"]{color-scheme:dark;
+  --bg:#121211;--surface:#1a1a19;--line:#2e2e2c;--text:#f0efec;--text2:#c3c2b7;--muted:#8d8c86;
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#8d8c86;--meta:#7b7b77;--accent:#9ec0ff}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 -apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif}
+header{background:linear-gradient(90deg,#1F3864,#2E75B6);color:#fff;padding:14px 16px}
+header h1{margin:0;font-size:18px;font-weight:700}header p{margin:2px 0 0;font-size:12px;opacity:.85}
+main{max-width:1100px;margin:0 auto;padding:12px 16px 40px}
+.filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:4px 0 12px}
+.filters label{font-size:12px;color:var(--text2);display:flex;align-items:center;gap:6px}
+select,input[type=number],button{font:inherit;font-size:13px;padding:6px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--text)}
+button{cursor:pointer}button.primary{background:var(--accent);color:#fff;border-color:transparent}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;border-radius:0;padding:6px 12px;background:transparent}
+.seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px}
+.tile .n{font-size:26px;font-weight:700;line-height:1.1}.tile .l{font-size:12px;color:var(--text2);margin-top:2px}
+.tile .d{font-size:11px;color:var(--muted);margin-top:4px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:12px}
+.card h2{margin:0 0 2px;font-size:15px}.card .sub{font-size:12px;color:var(--text2);margin-bottom:10px}
+.card>div[id^=chart]{min-width:0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}@media(max-width:760px){.grid2{grid-template-columns:1fr}}
+svg{width:100%;height:auto;display:block;overflow:visible}
+svg text{fill:var(--text2);font-size:11px}
+.axis line,.grid line{stroke:var(--line)}
+.bar{cursor:pointer}.bar:hover rect.v,.bar:focus rect.v{filter:brightness(1.12)}
+.bar:focus{outline:none}.bar:focus rect.v{stroke:var(--text);stroke-width:1}
+.tip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:8px 10px;font-size:12px;box-shadow:0 4px 16px rgba(0,0,0,.15);z-index:9;display:none;max-width:260px}
+.tip b{font-size:14px;color:var(--text)}.tip .k{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+.legend{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:12px;color:var(--text2);margin-top:8px}
+.legend span{display:inline-flex;align-items:center;gap:6px;cursor:pointer}.legend i{display:inline-block;width:14px;height:3px;border-radius:2px}
+.legend i.rect{height:10px;border-radius:2px}
+.legend span[aria-pressed="false"]{opacity:.4}
+table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:var(--text2);font-weight:600;cursor:pointer;white-space:nowrap}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+.st{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;white-space:nowrap}
+.st.good{background:color-mix(in srgb,var(--good) 18%,transparent);color:var(--good)}
+.st.warn{background:color-mix(in srgb,var(--warn) 25%,transparent);color:#7a5200}
+.st.serious{background:color-mix(in srgb,var(--serious) 25%,transparent);color:#8a3a14}
+.st.crit{background:color-mix(in srgb,var(--crit) 18%,transparent);color:var(--crit)}
+.st.na{background:color-mix(in srgb,var(--muted) 18%,transparent);color:var(--text2)}
+:root[data-theme="dark"] .st.warn,:root[data-theme="dark"] .st.serious{color:#f0efec}
+.wrap{overflow:auto}
+details summary{cursor:pointer;font-size:12px;color:var(--text2);margin-top:8px}
+.search{width:100%;max-width:320px;margin-bottom:8px}
+.muted{color:var(--muted);font-size:12px}
+.pill{display:inline-block;padding:1px 7px;border-radius:999px;background:var(--line);font-size:11px;margin-left:4px}
+.pct-bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;min-width:70px}.pct-bar i{display:block;height:100%;border-radius:4px}
+.status{font-size:12px;color:var(--text2);margin-left:auto}
+.cfg{display:none;gap:8px;flex-wrap:wrap;align-items:center;margin-top:8px}.cfg.open{display:flex}
+.cfg input{width:80px}
+</style>
+</head>
+<body>
+<header><h1>Metas de Visitas Técnicas</h1><p>PRODESAL Peumo · INDAP · Panel de coordinación</p></header>
+<main>
+  <div class="filters" id="filters">
+    <div class="seg" id="segPer" role="group" aria-label="Período"></div>
+    <label>Asesor <select id="fAsesor"><option value="">Todos</option></select></label>
+    <label>Año <select id="fAnio"></select></label>
+    <button id="btnCfg" title="Metas anuales">⚙ Metas</button>
+    <button class="primary" id="btnRefresh">↻ Actualizar</button>
+    <span class="status" id="status">—</span>
+  </div>
+  <div class="cfg" id="cfg">
+    <label>Meta anual Asesor Técnico <input type="number" id="mTec" min="1" max="5000"></label>
+    <label>Meta anual Asesor Profesional <input type="number" id="mAP" min="1" max="5000"></label>
+    <span class="muted">La meta trimestral es un cuarto de la anual. Se guarda en este dispositivo.</span>
+  </div>
+
+  <div class="tiles" id="tiles"></div>
+
+  <div class="card">
+    <h2>Cumplimiento por asesor</h2>
+    <div class="sub" id="sub1"></div>
+    <div id="chartBars"></div>
+    <div class="muted" style="margin-top:6px">Toca una barra para filtrar todo el panel por ese asesor. La marca gris es la meta del período.</div>
+  </div>
+
+  <div class="grid2">
+    <div class="card">
+      <h2>Avance acumulado en el año</h2>
+      <div class="sub">Visitas acumuladas por semana vs. meta anual proporcional (línea gris discontinua)</div>
+      <div id="chartLines"></div>
+      <div class="legend" id="legendLines"></div>
+      <details><summary>Ver datos</summary><div class="wrap" id="tableLines"></div></details>
+    </div>
+    <div class="card">
+      <h2>Visitas por mes</h2>
+      <div class="sub" id="sub3">Visitas técnicas registradas cada mes</div>
+      <div id="chartMonths"></div>
+      <div class="legend" id="legendMonths"></div>
+      <details><summary>Ver datos</summary><div class="wrap" id="tableMonths"></div></details>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Cumplimiento por trimestre</h2>
+    <div class="sub">Visitas realizadas / meta trimestral por asesor, todo el año</div>
+    <div class="wrap" id="tableQ"></div>
+  </div>
+
+  <div class="card">
+    <h2>Usuarios sin visita técnica <span class="pill" id="nPend"></span></h2>
+    <div class="sub" id="sub5"></div>
+    <input class="search" id="search" placeholder="Buscar por nombre, RUT, sector o rubro…">
+    <div class="wrap" id="tablePend"></div>
+  </div>
+
+  <div class="card">
+    <h2>Usuarios con más visitas <span class="pill" id="nTop"></span></h2>
+    <div class="sub">Concentración de visitas en el período seleccionado (para detectar usuarios muy visitados vs. descuidados)</div>
+    <div class="wrap" id="tableTop"></div>
+  </div>
+</main>
+<div class="tip" id="tip"></div>
+
+<script>
+const SYNC_URL='https://script.google.com/macros/s/AKfycbwY2JeA1eaJvHKKFA6w1t1Qd2AKiHnOlfbCc2VWHgOVluq1RpcAMNKuusLETndGAkIi8w/exec';
+const EQUIPO=[
+  {nombre:"Valeria Osorio",abr:"V. OSORIO",cargo:"Asesor Técnico",color:'var(--s1)'},
+  {nombre:"Rodrigo Contreras",abr:"R. CONTRERAS",cargo:"Asesor Técnico",color:'var(--s2)'},
+  {nombre:"Alexis Maulén",abr:"A. MAULEN",cargo:"Asesor Técnico",color:'var(--s3)'},
+  {nombre:"Marco Rojas",abr:"M. ROJAS",cargo:"Asesor Técnico",color:'var(--s4)'},
+  {nombre:"Felipe Osorio Pérez",abr:"F. OSORIO",cargo:"Asesor Profesional",color:'var(--s5)'},
+  {nombre:"Juan Miranda Tobar",abr:"J. MIRANDA",cargo:"Coordinador",color:'var(--s6)'}
+];
+const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const LD=k=>{try{return JSON.parse(localStorage.getItem('pm_'+k))}catch{return null}};
+const SV=(k,v)=>{try{localStorage.setItem('pm_'+k,JSON.stringify(v))}catch{}};
+const normT=s=>(s||'').toString().replace(/\.\s*/g,'.').replace(/\s+/g,' ').trim().toUpperCase();
+const normR=s=>(s||'').toString().replace(/[\s.]/g,'').toUpperCase();
+const esc=s=>String(s==null?'':s);
+const $=id=>document.getElementById(id);
+const wk=d=>{const t=new Date(d);t.setHours(0,0,0,0);t.setDate(t.getDate()+3-(t.getDay()+6)%7);const w=new Date(t.getFullYear(),0,4);return 1+Math.round(((t-w)/864e5-3+(w.getDay()+6)%7)/7)};
+const fmtD=s=>s?new Date(s+'T12:00:00').toLocaleDateString('es-CL',{day:'2-digit',month:'short'}):'—';
+
+let vis=LD('vis')||[],nom=LD('nom')||[],lastSync=LD('last')||'';
+let metas=LD('metas')||{tec:400,ap:200};
+let F={per:'all',asesor:'',anio:new Date().getFullYear()};
+let hidden=new Set();
+
+// ---------- datos ----------
+async function cargar(){
+  $('status').textContent='Cargando…';
+  try{
+    const [r1,r2]=await Promise.all([fetch(SYNC_URL+'?action=read').then(r=>r.json()),fetch(SYNC_URL+'?action=nomina').then(r=>r.json())]);
+    if(r1.visitas){vis=r1.visitas;SV('vis',vis)}
+    if(r2.agricultores){nom=r2.agricultores;SV('nom',nom)}
+    lastSync=new Date().toLocaleString('es-CL',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});SV('last',lastSync);
+  }catch(e){console.error(e);$('status').textContent='Sin conexión: mostrando datos guardados ('+(lastSync||'nunca')+')';render();return}
+  $('status').textContent='Actualizado '+lastSync;render();
+}
+
+function tecnicos(){
+  const byAbr={};EQUIPO.forEach(e=>byAbr[normT(e.abr)]=e);
+  // asegura que técnicos presentes en nómina o visitas aparezcan aunque no estén en EQUIPO
+  const extra=new Set();nom.forEach(u=>{const t=normT(u.tecnico);if(t&&!byAbr[t])extra.add(t)});vis.forEach(v=>{const t=normT(v.asesor);if(t&&!byAbr[t])extra.add(t)});
+  const list=EQUIPO.map(e=>({...e,key:normT(e.abr)}));
+  [...extra].forEach((k,i)=>list.push({nombre:k,abr:k,cargo:'Asesor Técnico',key:k,color:'var(--s6)'}));
+  return list;
+}
+function metaAnual(t){return t.cargo==='Asesor Profesional'?+metas.ap:t.cargo==='Coordinador'?0:+metas.tec}
+function rangoPer(){
+  const y=+F.anio;
+  if(F.per==='all')return{ini:new Date(y,0,1),fin:new Date(y,11,31),label:'Año '+y,frac:1};
+  const q=+F.per;return{ini:new Date(y,(q-1)*3,1),fin:new Date(y,q*3,0),label:'Trimestre '+q+' · '+y,frac:.25};
+}
+function enRango(d,r){return d>=r.ini&&d<=r.fin}
+const toD=s=>{const m=(s||'').toString().match(/^(\d{4})-(\d{2})-(\d{2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):null};
+function visitasTec(){return vis.map(v=>({...v,d:toD(v.fecha),k:normT(v.asesor),r:normR(v.rut)})).filter(v=>v.d&&(!v.tipo||/^visita t/i.test(v.tipo)))}
+
+function calcular(){
+  const T=tecnicos(),R=rangoPer(),y=+F.anio;
+  const vt=visitasTec().filter(v=>v.d.getFullYear()===y);
+  const hoy=new Date();hoy.setHours(0,0,0,0);
+  const fin=R.fin<hoy?R.fin:hoy;const transc=R.ini>hoy?0:Math.min(1,Math.max(0,(fin-R.ini+864e5)/(R.fin-R.ini+864e5)));
+  const vp=vt.filter(v=>enRango(v.d,R));
+  const porA={},porU={},ultima={};
+  vp.forEach(v=>{porA[v.k]=(porA[v.k]||0)+1;porU[v.r]=(porU[v.r]||0)+1});
+  vt.forEach(v=>{if(!ultima[v.r]||v.d>ultima[v.r])ultima[v.r]=v.d});
+  const rows=T.map(t=>{
+    const meta=Math.round(metaAnual(t)*R.frac),hechas=porA[t.key]||0;
+    const esperado=Math.round(meta*transc);
+    const usuarios=nom.filter(u=>normT(u.tecnico)===t.key);
+    const sinVisita=usuarios.filter(u=>!porU[normR(u.rut)]);
+    const st=!meta?'na':hechas>=meta?'good':hechas>=esperado?'ok':hechas>=esperado*.75?'warn':'crit';
+    return{...t,meta,hechas,esperado,pct:meta?hechas/meta:null,faltan:Math.max(0,meta-hechas),usuarios:usuarios.length,sinVisita,st};
+  });
+  // por trimestre (todo el año)
+  const Q=[1,2,3,4].map(q=>({q,ini:new Date(y,(q-1)*3,1),fin:new Date(y,q*3,0)}));
+  const porQ=T.map(t=>({t,q:Q.map(qq=>{const n=vt.filter(v=>v.k===t.key&&enRango(v.d,qq)).length;const m=Math.round(metaAnual(t)/4);return{n,m,pct:m?n/m:null}})}));
+  // acumulado semanal
+  const semMax=y===hoy.getFullYear()?wk(hoy):52;
+  const acum=T.map(t=>{const arr=[];let c=0;for(let w=1;w<=semMax;w++){c+=vt.filter(v=>v.k===t.key&&wk(v.d)===w).length;arr.push(c)}return{t,arr}});
+  // por mes
+  const meses=T.map(t=>({t,arr:MESES.map((_,m)=>vt.filter(v=>v.k===t.key&&v.d.getMonth()===m).length)}));
+  return{T,R,rows,porQ,acum,meses,semMax,transc,vp,porU,ultima,vt};
+}
+
+// ---------- render ----------
+let D=null;
+function render(){
+  D=calcular();
+  const sel=F.asesor?D.rows.filter(r=>r.key===F.asesor):D.rows.filter(r=>r.cargo!=='Coordinador');
+  // tiles
+  const hechas=sel.reduce((n,r)=>n+r.hechas,0),meta=sel.reduce((n,r)=>n+r.meta,0),usu=sel.reduce((n,r)=>n+r.usuarios,0),sin=sel.reduce((n,r)=>n+r.sinVisita.length,0);
+  const pct=meta?Math.round(hechas/meta*100):0;
+  const diasRest=Math.max(0,Math.round((D.R.fin-new Date())/864e5));
+  const semRest=Math.max(0.1,diasRest/7);const ritmo=meta?Math.ceil((meta-hechas)/semRest):0;
+  $('tiles').innerHTML=[
+    [hechas,'Visitas técnicas',D.R.label],[meta,'Meta del período',F.asesor?'':'Suma de asesores con meta'],
+    [pct+'%','Cumplimiento',Math.round(D.transc*100)+'% del período transcurrido'],
+    [usu-sin,'Usuarios visitados','de '+usu+' asignados'],
+    [sin,'Usuarios sin visita','en el período'],
+    [diasRest?ritmo+'/sem':'—','Ritmo necesario',diasRest?diasRest+' días restantes':'Período cerrado']
+  ].map(([n,l,d])=>'<div class="tile"><div class="n">'+n+'</div><div class="l">'+l+'</div><div class="d">'+d+'</div></div>').join('');
+  $('sub1').textContent=D.R.label+' · barra = visitas realizadas · marca gris = meta';
+  $('sub5').textContent='Usuarios asignados '+(F.asesor?'a '+nombreDe(F.asesor):'a cada técnico')+' sin visita técnica en '+D.R.label.toLowerCase();
+  renderBars();renderLines();renderMonths();renderQ();renderPend();renderTop();
+}
+const nombreDe=k=>{const t=D.T.find(x=>x.key===k);return t?t.abr:k};
+const stLabel={good:'Cumplida',ok:'En ritmo',warn:'Atrasado',crit:'Crítico',na:'Sin meta'};
+const stClass={good:'good',ok:'good',warn:'warn',crit:'crit',na:'na'};
+const stIcon={good:'✓',ok:'→',warn:'!',crit:'✕',na:'·'};
+const badge=s=>'<span class="st '+stClass[s]+'">'+stIcon[s]+' '+stLabel[s]+'</span>';
+
+function renderBars(){
+  const rows=D.rows.filter(r=>r.cargo!=='Coordinador'||r.hechas);
+  const cw=$('chartBars').clientWidth||900,narrow=cw<560;const W=Math.max(340,cw),rowH=narrow?40:34,padL=narrow?84:120,padR=narrow?10:70,H=rows.length*rowH+30;
+  const max=Math.max(1,...rows.map(r=>Math.max(r.hechas,r.meta)));
+  const x=v=>padL+(W-padL-padR)*v/max;
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Cumplimiento por asesor">';
+  // grid
+  const ticks=niceTicks(max,5);s+='<g class="grid">'+ticks.map(t=>'<line x1="'+x(t)+'" x2="'+x(t)+'" y1="0" y2="'+(H-24)+'"/><text x="'+x(t)+'" y="'+(H-8)+'" text-anchor="middle">'+t+'</text>').join('')+'</g>';
+  rows.forEach((r,i)=>{
+    const y=i*rowH+6,h=rowH-14,dim=F.asesor&&F.asesor!==r.key;
+    s+='<g class="bar" tabindex="0" data-k="'+r.key+'" data-i="'+i+'" opacity="'+(dim?.35:1)+'">';
+    s+='<rect x="'+padL+'" y="'+(y-4)+'" width="'+(W-padL)+'" height="'+(h+8)+'" fill="transparent"/>';
+    s+='<text x="'+(padL-8)+'" y="'+(y+h/2+4)+'" text-anchor="end" style="fill:var(--text);font-weight:600">'+esc(r.abr)+'</text>';
+    s+='<rect class="v" x="'+padL+'" y="'+y+'" width="'+Math.max(0,x(r.hechas)-padL)+'" height="'+h+'" rx="4" fill="'+r.color+'"/>';
+    if(r.meta)s+='<line x1="'+x(r.meta)+'" x2="'+x(r.meta)+'" y1="'+(y-3)+'" y2="'+(y+h+3)+'" stroke="var(--meta)" stroke-width="3" stroke-linecap="round"/>';
+    const lbl=r.hechas+(r.meta?' <tspan style="fill:var(--text2);font-weight:400">/ '+r.meta+' · '+Math.round(r.pct*100)+'%</tspan>':'');
+    const lw=(String(r.hechas).length+(r.meta?String(r.meta).length+8:0))*7;
+    const inside=x(r.hechas)+6+lw>W-2;
+    s+='<text x="'+(inside?x(r.hechas)-6:x(r.hechas)+6)+'" y="'+(y+h/2+4)+'" text-anchor="'+(inside?'end':'start')+'" style="fill:'+(inside?'#fff':'var(--text)')+';font-weight:600">'+(inside?lbl.replace(/style="fill:var\(--text2\);/g,'style="fill:#fff;opacity:.85;'):lbl)+'</text>';
+    s+='</g>';
+  });
+  s+='</svg>';
+  $('chartBars').innerHTML=s;
+  $('chartBars').querySelectorAll('.bar').forEach(g=>{
+    const r=rows[+g.dataset.i];
+    const show=e=>tip(e,'<b>'+r.hechas+' visitas</b> '+(r.meta?'de '+r.meta+' ('+Math.round(r.pct*100)+'%)':'')+'<br><span class="k" style="background:'+r.color+'"></span>'+esc(r.abr)+' · '+esc(r.cargo)+'<br>'+(r.meta?'Esperado a la fecha: '+r.esperado+' · Faltan: '+r.faltan+'<br>':'')+r.sinVisita.length+' de '+r.usuarios+' usuarios sin visita<br>'+badge(r.st));
+    g.addEventListener('pointermove',show);g.addEventListener('focus',show);g.addEventListener('pointerleave',hideTip);g.addEventListener('blur',hideTip);
+    const go=()=>{F.asesor=F.asesor===r.key?'':r.key;$('fAsesor').value=F.asesor;render()};
+    g.addEventListener('click',go);g.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();go()}});
+  });
+}
+
+function renderLines(){
+  const series=D.acum.filter(s=>s.t.cargo!=='Coordinador'&&(!F.asesor||s.t.key===F.asesor));
+  const W=Math.max(320,$('chartLines').clientWidth||520),H=260,pL=36,pR=36,pT=10,pB=26,n=D.semMax;
+  // líneas de referencia: una por tipo de meta presente (técnico / profesional)
+  const refs=[...new Set(series.map(sr=>metaAnual(sr.t)).filter(Boolean))].sort((a,b)=>b-a).map(m=>({m,arr:Array.from({length:n},(_,i)=>Math.round(m*(i+1)/52)),label:'Meta '+(m===+metas.ap&&m!==+metas.tec?'asesor profesional':'asesor técnico')+' ('+m+'/año)'}));
+  const metaArr=refs.length?refs[0].arr:Array.from({length:n},()=>0);
+  const max=Math.max(1,...series.flatMap(s=>s.arr),...refs.map(r=>r.arr[n-1]));
+  const x=w=>pL+(W-pL-pR)*(w-1)/Math.max(1,n-1),y=v=>pT+(H-pT-pB)*(1-v/max);
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Avance acumulado">';
+  const ticks=niceTicks(max,4);s+='<g class="grid">'+ticks.map(t=>'<line x1="'+pL+'" x2="'+(W-pR)+'" y1="'+y(t)+'" y2="'+y(t)+'"/><text x="'+(pL-6)+'" y="'+(y(t)+4)+'" text-anchor="end">'+t+'</text>').join('')+'</g>';
+  for(let w=1;w<=n;w+=(n>26?8:4))s+='<text x="'+x(w)+'" y="'+(H-8)+'" text-anchor="middle">S'+w+'</text>';
+  // meta proporcional: si hay varias series, meta sumada; si una, su meta
+  refs.forEach((r,i)=>{s+='<path d="'+r.arr.map((v,k)=>(k?'L':'M')+x(k+1)+' '+y(v)).join('')+'" fill="none" stroke="var(--meta)" stroke-width="2" stroke-dasharray="'+(i?'2 4':'6 5')+'"/>'});
+  const vis_=series.filter(sr=>!hidden.has(sr.t.key));
+  vis_.forEach(sr=>{s+='<path d="'+sr.arr.map((v,i)=>(i?'L':'M')+x(i+1)+' '+y(v)).join('')+'" fill="none" stroke="'+sr.t.color+'" stroke-width="2" stroke-linejoin="round"/>';
+    s+='<circle cx="'+x(n)+'" cy="'+y(sr.arr[n-1])+'" r="4" fill="'+sr.t.color+'" stroke="var(--surface)" stroke-width="2"/>'});
+  // etiquetas finales sin superposición
+  const labs=vis_.map(sr=>({v:sr.arr[n-1],yy:y(sr.arr[n-1]),c:sr.t.color})).sort((a,b)=>a.yy-b.yy);
+  for(let i=1;i<labs.length;i++)if(labs[i].yy-labs[i-1].yy<12)labs[i].yy=labs[i-1].yy+12;
+  for(let i=labs.length-1;i>=0;i--){if(labs[i].yy>H-pB-2)labs[i].yy=H-pB-2;if(i<labs.length-1&&labs[i+1].yy-labs[i].yy<12)labs[i].yy=labs[i+1].yy-12}
+  labs.forEach(l=>{s+='<text x="'+(x(n)+7)+'" y="'+(l.yy+4)+'" style="fill:var(--text);font-weight:600">'+l.v+'</text>'});
+  s+='<line id="xh" x1="0" x2="0" y1="'+pT+'" y2="'+(H-pB)+'" stroke="var(--text2)" stroke-width="1" stroke-dasharray="3 3" opacity="0"/>';
+  s+='<rect x="'+pL+'" y="'+pT+'" width="'+(W-pL-pR)+'" height="'+(H-pT-pB)+'" fill="transparent" id="hitL"/>';
+  s+='</svg>';
+  $('chartLines').innerHTML=s;
+  const svg=$('chartLines').querySelector('svg'),hit=$('hitL'),xh=$('xh');
+  const mv=e=>{const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;const p=pt.matrixTransform(svg.getScreenCTM().inverse());
+    const w=Math.max(1,Math.min(n,Math.round(1+(p.x-pL)/(W-pL-pR)*(n-1))));xh.setAttribute('x1',x(w));xh.setAttribute('x2',x(w));xh.setAttribute('opacity','1');
+    tip(e,'<b>Semana '+w+'</b><br>'+series.filter(sr=>!hidden.has(sr.t.key)).map(sr=>'<span class="k" style="background:'+sr.t.color+'"></span><b>'+sr.arr[w-1]+'</b> '+esc(sr.t.abr)).join('<br>')+refs.map(r=>'<br><span class="k" style="background:var(--meta)"></span>'+r.arr[w-1]+' '+r.label.toLowerCase()).join(''))};
+  hit.addEventListener('pointermove',mv);hit.addEventListener('pointerleave',()=>{xh.setAttribute('opacity','0');hideTip()});
+  $('legendLines').innerHTML=series.map(sr=>'<span role="button" tabindex="0" aria-pressed="'+!hidden.has(sr.t.key)+'" data-k="'+sr.t.key+'"><i style="background:'+sr.t.color+'"></i>'+esc(sr.t.abr)+'</span>').join('')+refs.map((r,i)=>'<span><i style="height:0;border-top:2px '+(i?'dotted':'dashed')+' var(--meta)"></i>'+r.label+'</span>').join('');
+  $('legendLines').querySelectorAll('[data-k]').forEach(el=>{const t=()=>{const k=el.dataset.k;hidden.has(k)?hidden.delete(k):hidden.add(k);renderLines()};el.addEventListener('click',t);el.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();t()}})});
+  $('tableLines').innerHTML='<table><tr><th>Semana</th>'+series.map(sr=>'<th class="num">'+esc(sr.t.abr)+'</th>').join('')+refs.map(r=>'<th class="num">Meta '+r.m+'</th>').join('')+'</tr>'+Array.from({length:n},(_,i)=>'<tr><td>S'+(i+1)+'</td>'+series.map(sr=>'<td class="num">'+sr.arr[i]+'</td>').join('')+refs.map(r=>'<td class="num">'+r.arr[i]+'</td>').join('')+'</tr>').join('')+'</table>';
+}
+
+function renderMonths(){
+  const series=D.meses.filter(s=>s.t.cargo!=='Coordinador'&&(!F.asesor||s.t.key===F.asesor));
+  const W=Math.max(320,$('chartMonths').clientWidth||520),H=260,pL=36,pR=8,pT=10,pB=26;
+  const months=F.per==='all'?[0,1,2,3,4,5,6,7,8,9,10,11]:[(+F.per-1)*3,(+F.per-1)*3+1,(+F.per-1)*3+2];
+  const max=Math.max(1,...series.flatMap(s=>months.map(m=>s.arr[m])));
+  const gw=(W-pL-pR)/months.length,bw=Math.max(4,(gw-10)/Math.max(1,series.length)-2),y=v=>pT+(H-pT-pB)*(1-v/max);
+  let s='<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Visitas por mes">';
+  const ticks=niceTicks(max,4);s+='<g class="grid">'+ticks.map(t=>'<line x1="'+pL+'" x2="'+(W-pR)+'" y1="'+y(t)+'" y2="'+y(t)+'"/><text x="'+(pL-6)+'" y="'+(y(t)+4)+'" text-anchor="end">'+t+'</text>').join('')+'</g>';
+  const marks=[];
+  months.forEach((m,mi)=>{const x0=pL+gw*mi;s+='<text x="'+(x0+gw/2)+'" y="'+(H-8)+'" text-anchor="middle">'+MESES[m]+'</text>';
+    series.forEach((sr,si)=>{const v=sr.arr[m],x=x0+5+si*(bw+2);const h=Math.max(0,(H-pB)-y(v));
+      s+='<g class="bar" tabindex="0" data-i="'+marks.length+'"><rect x="'+(x-1)+'" y="'+pT+'" width="'+(bw+2)+'" height="'+(H-pT-pB)+'" fill="transparent"/><rect class="v" x="'+x+'" y="'+y(v)+'" width="'+bw+'" height="'+h+'" rx="3" fill="'+sr.t.color+'"/></g>';marks.push({sr,m,v})});
+  });
+  s+='</svg>';$('chartMonths').innerHTML=s;
+  $('chartMonths').querySelectorAll('.bar').forEach(g=>{const k=marks[+g.dataset.i];const show=e=>tip(e,'<b>'+k.v+' visitas</b><br><span class="k" style="background:'+k.sr.t.color+'"></span>'+esc(k.sr.t.abr)+' · '+MESES[k.m]+' '+F.anio);g.addEventListener('pointermove',show);g.addEventListener('focus',show);g.addEventListener('pointerleave',hideTip);g.addEventListener('blur',hideTip)});
+  $('legendMonths').innerHTML=series.map(sr=>'<span><i class="rect" style="background:'+sr.t.color+'"></i>'+esc(sr.t.abr)+'</span>').join('');
+  $('tableMonths').innerHTML='<table><tr><th>Mes</th>'+series.map(sr=>'<th class="num">'+esc(sr.t.abr)+'</th>').join('')+'</tr>'+months.map(m=>'<tr><td>'+MESES[m]+'</td>'+series.map(sr=>'<td class="num">'+sr.arr[m]+'</td>').join('')+'</tr>').join('')+'</table>';
+}
+
+function renderQ(){
+  const rows=D.porQ.filter(r=>r.t.cargo!=='Coordinador'&&(!F.asesor||r.t.key===F.asesor));
+  const hoyQ=Math.floor(new Date().getMonth()/3)+1,esteAnio=+F.anio===new Date().getFullYear();
+  const cell=(c,q)=>{if(c.pct==null)return'<td class="num muted">'+c.n+'</td>';const fut=esteAnio&&q>hoyQ;const col=c.pct>=1?'var(--good)':c.pct>=.75?'var(--warn)':c.pct>=.5?'var(--serious)':'var(--crit)';
+    return'<td class="num"'+(fut?' style="opacity:.45"':'')+'><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span>'+c.n+' / '+c.m+' <b>'+Math.round(c.pct*100)+'%</b></span><div class="pct-bar"><i style="width:'+Math.min(100,Math.round(c.pct*100))+'%;background:'+col+'"></i></div></div></td>'};
+  $('tableQ').innerHTML='<table><tr><th>Asesor</th><th class="num">T1 (ene–mar)</th><th class="num">T2 (abr–jun)</th><th class="num">T3 (jul–sep)</th><th class="num">T4 (oct–dic)</th><th class="num">Año</th></tr>'
+    +rows.map(r=>{const tot=r.q.reduce((n,c)=>n+c.n,0),mt=metaAnual(r.t);return'<tr><td><i style="display:inline-block;width:10px;height:10px;border-radius:2px;background:'+r.t.color+';margin-right:6px;vertical-align:middle"></i><b>'+esc(r.t.abr)+'</b><br><span class="muted">'+esc(r.t.cargo)+'</span></td>'+r.q.map((c,i)=>cell(c,i+1)).join('')+'<td class="num"><b>'+tot+'</b>'+(mt?' / '+mt+' · '+Math.round(tot/mt*100)+'%':'')+'</td></tr>'}).join('')+'</table>';
+}
+
+let sortP={k:'tecnico',asc:true};
+function renderPend(){
+  const rows=D.rows.filter(r=>!F.asesor||r.key===F.asesor).flatMap(r=>r.sinVisita.map(u=>({tecnico:r.abr,rut:u.rut,nombre:((u.nombres||'')+' '+(u.apellidos||'')).trim(),rubro:u.rubro||'',sector:u.sector||'',tel:u.telefono||'',ultima:D.ultima[normR(u.rut)]?D.ultima[normR(u.rut)].toISOString().slice(0,10):'',nAnio:D.vt.filter(v=>v.r===normR(u.rut)).length})));
+  const q=($('search').value||'').toLowerCase();
+  const f=rows.filter(r=>!q||[r.nombre,r.rut,r.sector,r.rubro,r.tecnico].join(' ').toLowerCase().includes(q));
+  f.sort((a,b)=>{const va=a[sortP.k]||'',vb=b[sortP.k]||'';return (typeof va==='number'?va-vb:String(va).localeCompare(String(vb)))*(sortP.asc?1:-1)});
+  $('nPend').textContent=f.length+(q?' de '+rows.length:'');
+  const th=(k,l,num)=>'<th'+(num?' class="num"':'')+' data-k="'+k+'">'+l+(sortP.k===k?(sortP.asc?' ▲':' ▼'):'')+'</th>';
+  $('tablePend').innerHTML=f.length?'<table><tr>'+th('tecnico','Asesor')+th('nombre','Usuario')+th('rut','RUT')+th('rubro','Rubro')+th('sector','Sector')+th('ultima','Última visita')+th('nAnio','Visitas año',1)+'<th>Tel.</th></tr>'
+    +f.slice(0,400).map(r=>'<tr><td>'+esc(r.tecnico)+'</td><td><b>'+esc(r.nombre)+'</b></td><td>'+esc(r.rut)+'</td><td>'+esc(r.rubro)+'</td><td>'+esc(r.sector)+'</td><td'+(r.ultima?'':' style="color:var(--crit);font-weight:600"')+'>'+(r.ultima?fmtD(r.ultima):'Nunca')+'</td><td class="num">'+r.nAnio+'</td><td>'+(r.tel?'<a href="tel:'+esc(r.tel).replace(/\s/g,'')+'">'+esc(r.tel)+'</a>':'')+'</td></tr>').join('')+'</table>'+(f.length>400?'<p class="muted">Mostrando 400 de '+f.length+'. Usa el buscador.</p>':'')
+    :'<p class="muted">Todos los usuarios tienen al menos una visita técnica en el período.</p>';
+  $('tablePend').querySelectorAll('th[data-k]').forEach(h=>h.addEventListener('click',()=>{const k=h.dataset.k;sortP={k,asc:sortP.k===k?!sortP.asc:true};renderPend()}));
+}
+
+function renderTop(){
+  const byR={};nom.forEach(u=>byR[normR(u.rut)]=u);
+  const rows=Object.keys(D.porU).map(r=>{const u=byR[r]||{};const tk=normT(u.tecnico);return{n:D.porU[r],rut:u.rut||r,nombre:u.rut?((u.nombres||'')+' '+(u.apellidos||'')).trim():'(no está en la nómina)',tecnico:tk,sector:u.sector||''}}).filter(r=>!F.asesor||r.tecnico===F.asesor).sort((a,b)=>b.n-a.n).slice(0,15);
+  $('nTop').textContent='top '+rows.length;
+  $('tableTop').innerHTML=rows.length?'<table><tr><th class="num">Visitas</th><th>Usuario</th><th>RUT</th><th>Asesor asignado</th><th>Sector</th></tr>'+rows.map(r=>'<tr><td class="num"><b>'+r.n+'</b></td><td>'+esc(r.nombre)+'</td><td>'+esc(r.rut)+'</td><td>'+esc(r.tecnico)+'</td><td>'+esc(r.sector)+'</td></tr>').join('')+'</table>':'<p class="muted">Sin visitas en el período.</p>';
+}
+
+// ---------- utilidades UI ----------
+function niceTicks(max,n){const raw=max/n,p=Math.pow(10,Math.floor(Math.log10(raw)));const step=[1,2,5,10].map(m=>m*p).find(s=>s>=raw)||p*10;const out=[];for(let v=0;v<=max;v+=step)out.push(v);return out}
+function tip(e,html){const t=$('tip');t.innerHTML=html;t.style.display='block';const r=t.getBoundingClientRect();let x=e.clientX+14,y=e.clientY+14;if(x+r.width>innerWidth-8)x=e.clientX-r.width-14;if(y+r.height>innerHeight-8)y=e.clientY-r.height-14;t.style.left=x+'px';t.style.top=y+'px'}
+function hideTip(){$('tip').style.display='none'}
+
+function initUI(){
+  const seg=$('segPer');const opts=[['all','Todo el año'],['1','T1'],['2','T2'],['3','T3'],['4','T4']];
+  seg.innerHTML=opts.map(([v,l])=>'<button data-v="'+v+'" aria-pressed="'+(F.per===v)+'">'+l+'</button>').join('');
+  seg.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{F.per=b.dataset.v;seg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));render()}));
+  const y=new Date().getFullYear();$('fAnio').innerHTML=[y-1,y,y+1].map(v=>'<option value="'+v+'"'+(v===y?' selected':'')+'>'+v+'</option>').join('');
+  $('fAnio').addEventListener('change',e=>{F.anio=+e.target.value;render()});
+  $('fAsesor').innerHTML='<option value="">Todos</option>'+tecnicos().filter(t=>t.cargo!=='Coordinador').map(t=>'<option value="'+t.key+'">'+esc(t.abr)+' — '+esc(t.cargo)+'</option>').join('');
+  $('fAsesor').addEventListener('change',e=>{F.asesor=e.target.value;render()});
+  $('btnRefresh').addEventListener('click',cargar);
+  $('btnCfg').addEventListener('click',()=>$('cfg').classList.toggle('open'));
+  $('mTec').value=metas.tec;$('mAP').value=metas.ap;
+  ['mTec','mAP'].forEach(id=>$(id).addEventListener('change',()=>{const v=+$(id).value;if(v>0){metas[id==='mTec'?'tec':'ap']=v;SV('metas',metas);render()}}));
+  $('search').addEventListener('input',renderPend);
+  // F.per por defecto: trimestre actual
+  F.per=String(Math.floor(new Date().getMonth()/3)+1);seg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x.dataset.v===F.per));
+}
+initUI();
+let _rz;addEventListener('resize',()=>{clearTimeout(_rz);_rz=setTimeout(()=>{if(D)render()},150)});
+if(vis.length&&nom.length){$('status').textContent='Datos guardados ('+lastSync+')';render()}
+cargar();
+</script>
+</body>
+</html>

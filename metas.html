@@ -145,6 +145,19 @@ const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','
 const LD=k=>{try{return JSON.parse(localStorage.getItem('pm_'+k))}catch{return null}};
 const SV=(k,v)=>{try{localStorage.setItem('pm_'+k,JSON.stringify(v))}catch{}};
 const normT=s=>(s||'').toString().replace(/\.\s*/g,'.').replace(/\s+/g,' ').trim().toUpperCase();
+// Reconoce "F. OSORIO", "F.OSORIO" o "FELIPE OSORIO PÉREZ" como la misma persona del EQUIPO
+const sinAc=s=>(s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase();
+const _kc={};
+function keyDe(nombre){
+  const raw=normT(nombre);if(!raw)return '';if(_kc[raw]!==undefined)return _kc[raw];
+  let k=raw;const ab=EQUIPO.find(e=>normT(e.abr)===raw);
+  if(ab)k=normT(ab.abr);
+  else{const toks=sinAc(raw).replace(/[.,]/g,' ').split(/\s+/).filter(Boolean);
+    const m=EQUIPO.find(e=>{const nt=sinAc(e.nombre).split(/\s+/);const ini=sinAc(e.abr).replace(/\..*$/,'');const ape=sinAc(e.abr).split(/\.\s*/)[1]||'';
+      return toks.includes(ape)&&toks.some(t=>t[0]===ini[0]&&(t.length===1||nt.includes(t)))});
+    if(m)k=normT(m.abr)}
+  return _kc[raw]=k;
+}
 const normR=s=>(s||'').toString().replace(/[\s.]/g,'').toUpperCase();
 const esc=s=>String(s==null?'':s);
 const $=id=>document.getElementById(id);
@@ -171,12 +184,14 @@ async function cargar(){
 function tecnicos(){
   const byAbr={};EQUIPO.forEach(e=>byAbr[normT(e.abr)]=e);
   // asegura que técnicos presentes en nómina o visitas aparezcan aunque no estén en EQUIPO
-  const extra=new Set();nom.forEach(u=>{const t=normT(u.tecnico);if(t&&!byAbr[t])extra.add(t)});vis.forEach(v=>{const t=normT(v.asesor);if(t&&!byAbr[t])extra.add(t)});
+  const extra=new Set();nom.forEach(u=>{const t=keyDe(u.tecnico);if(t&&!byAbr[t])extra.add(t)});vis.forEach(v=>{const t=keyDe(v.asesor);if(t&&!byAbr[t])extra.add(t)});
   const list=EQUIPO.map(e=>({...e,key:normT(e.abr)}));
-  [...extra].forEach((k,i)=>list.push({nombre:k,abr:k,cargo:'Asesor Técnico',key:k,color:'var(--s6)'}));
+  // nombres no reconocidos: se muestran en gris, sin meta y sin sumar a la meta del equipo
+  [...extra].forEach((k,i)=>list.push({nombre:k,abr:k,cargo:'Sin asignar',key:k,color:'var(--s6)'}));
   return list;
 }
-function metaAnual(t){return t.cargo==='Asesor Profesional'?+metas.ap:t.cargo==='Coordinador'?0:+metas.tec}
+function metaAnual(t){return t.cargo==='Asesor Profesional'?+metas.ap:t.cargo==='Asesor Técnico'?+metas.tec:0}
+const conMeta=t=>t.cargo==='Asesor Técnico'||t.cargo==='Asesor Profesional';
 function rangoPer(){
   const y=+F.anio;
   if(F.per==='all')return{ini:new Date(y,0,1),fin:new Date(y,11,31),label:'Año '+y,frac:1};
@@ -184,7 +199,7 @@ function rangoPer(){
 }
 function enRango(d,r){return d>=r.ini&&d<=r.fin}
 const toD=s=>{const m=(s||'').toString().match(/^(\d{4})-(\d{2})-(\d{2})/);return m?new Date(+m[1],+m[2]-1,+m[3]):null};
-function visitasTec(){return vis.map(v=>({...v,d:toD(v.fecha),k:normT(v.asesor),r:normR(v.rut)})).filter(v=>v.d&&(!v.tipo||/^visita t/i.test(v.tipo)))}
+function visitasTec(){return vis.map(v=>({...v,d:toD(v.fecha),k:keyDe(v.asesor),r:normR(v.rut)})).filter(v=>v.d&&(!v.tipo||/^visita t/i.test(v.tipo)))}
 
 function calcular(){
   const T=tecnicos(),R=rangoPer(),y=+F.anio;
@@ -193,12 +208,13 @@ function calcular(){
   const fin=R.fin<hoy?R.fin:hoy;const transc=R.ini>hoy?0:Math.min(1,Math.max(0,(fin-R.ini+864e5)/(R.fin-R.ini+864e5)));
   const vp=vt.filter(v=>enRango(v.d,R));
   const porA={},porU={},ultima={};
-  vp.forEach(v=>{porA[v.k]=(porA[v.k]||0)+1;porU[v.r]=(porU[v.r]||0)+1});
+  const porUQuien={};
+  vp.forEach(v=>{porA[v.k]=(porA[v.k]||0)+1;porU[v.r]=(porU[v.r]||0)+1;porUQuien[v.r]=porUQuien[v.r]||{};porUQuien[v.r][v.k]=(porUQuien[v.r][v.k]||0)+1});
   vt.forEach(v=>{if(!ultima[v.r]||v.d>ultima[v.r])ultima[v.r]=v.d});
   const rows=T.map(t=>{
     const meta=Math.round(metaAnual(t)*R.frac),hechas=porA[t.key]||0;
     const esperado=Math.round(meta*transc);
-    const usuarios=nom.filter(u=>normT(u.tecnico)===t.key);
+    const usuarios=nom.filter(u=>keyDe(u.tecnico)===t.key);
     const sinVisita=usuarios.filter(u=>!porU[normR(u.rut)]);
     const st=!meta?'na':hechas>=meta?'good':hechas>=esperado?'ok':hechas>=esperado*.75?'warn':'crit';
     return{...t,meta,hechas,esperado,pct:meta?hechas/meta:null,faltan:Math.max(0,meta-hechas),usuarios:usuarios.length,sinVisita,st};
@@ -211,14 +227,14 @@ function calcular(){
   const acum=T.map(t=>{const arr=[];let c=0;for(let w=1;w<=semMax;w++){c+=vt.filter(v=>v.k===t.key&&wk(v.d)===w).length;arr.push(c)}return{t,arr}});
   // por mes
   const meses=T.map(t=>({t,arr:MESES.map((_,m)=>vt.filter(v=>v.k===t.key&&v.d.getMonth()===m).length)}));
-  return{T,R,rows,porQ,acum,meses,semMax,transc,vp,porU,ultima,vt};
+  return{T,R,rows,porQ,acum,meses,semMax,transc,vp,porU,porUQuien,ultima,vt};
 }
 
 // ---------- render ----------
 let D=null;
 function render(){
   D=calcular();
-  const sel=F.asesor?D.rows.filter(r=>r.key===F.asesor):D.rows.filter(r=>r.cargo!=='Coordinador');
+  const sel=F.asesor?D.rows.filter(r=>r.key===F.asesor):D.rows.filter(conMeta);
   // tiles
   const hechas=sel.reduce((n,r)=>n+r.hechas,0),meta=sel.reduce((n,r)=>n+r.meta,0),usu=sel.reduce((n,r)=>n+r.usuarios,0),sin=sel.reduce((n,r)=>n+r.sinVisita.length,0);
   const pct=meta?Math.round(hechas/meta*100):0;
@@ -242,7 +258,7 @@ const stIcon={good:'✓',ok:'→',warn:'!',crit:'✕',na:'·'};
 const badge=s=>'<span class="st '+stClass[s]+'">'+stIcon[s]+' '+stLabel[s]+'</span>';
 
 function renderBars(){
-  const rows=D.rows.filter(r=>r.cargo!=='Coordinador'||r.hechas);
+  const rows=D.rows.filter(r=>conMeta(r)||r.hechas);
   const cw=$('chartBars').clientWidth||900,narrow=cw<560;const W=Math.max(340,cw),rowH=narrow?40:34,padL=narrow?84:120,padR=narrow?10:70,H=rows.length*rowH+30;
   const max=Math.max(1,...rows.map(r=>Math.max(r.hechas,r.meta)));
   const x=v=>padL+(W-padL-padR)*v/max;
@@ -274,7 +290,7 @@ function renderBars(){
 }
 
 function renderLines(){
-  const series=D.acum.filter(s=>s.t.cargo!=='Coordinador'&&(!F.asesor||s.t.key===F.asesor));
+  const series=D.acum.filter(s=>conMeta(s.t)&&(!F.asesor||s.t.key===F.asesor));
   const W=Math.max(320,$('chartLines').clientWidth||520),H=260,pL=36,pR=36,pT=10,pB=26,n=D.semMax;
   // líneas de referencia: una por tipo de meta presente (técnico / profesional)
   const refs=[...new Set(series.map(sr=>metaAnual(sr.t)).filter(Boolean))].sort((a,b)=>b-a).map(m=>({m,arr:Array.from({length:n},(_,i)=>Math.round(m*(i+1)/52)),label:'Meta '+(m===+metas.ap&&m!==+metas.tec?'asesor profesional':'asesor técnico')+' ('+m+'/año)'}));
@@ -309,7 +325,7 @@ function renderLines(){
 }
 
 function renderMonths(){
-  const series=D.meses.filter(s=>s.t.cargo!=='Coordinador'&&(!F.asesor||s.t.key===F.asesor));
+  const series=D.meses.filter(s=>conMeta(s.t)&&(!F.asesor||s.t.key===F.asesor));
   const W=Math.max(320,$('chartMonths').clientWidth||520),H=260,pL=36,pR=8,pT=10,pB=26;
   const months=F.per==='all'?[0,1,2,3,4,5,6,7,8,9,10,11]:[(+F.per-1)*3,(+F.per-1)*3+1,(+F.per-1)*3+2];
   const max=Math.max(1,...series.flatMap(s=>months.map(m=>s.arr[m])));
@@ -328,7 +344,7 @@ function renderMonths(){
 }
 
 function renderQ(){
-  const rows=D.porQ.filter(r=>r.t.cargo!=='Coordinador'&&(!F.asesor||r.t.key===F.asesor));
+  const rows=D.porQ.filter(r=>conMeta(r.t)&&(!F.asesor||r.t.key===F.asesor));
   const hoyQ=Math.floor(new Date().getMonth()/3)+1,esteAnio=+F.anio===new Date().getFullYear();
   const cell=(c,q)=>{if(c.pct==null)return'<td class="num muted">'+c.n+'</td>';const fut=esteAnio&&q>hoyQ;const col=c.pct>=1?'var(--good)':c.pct>=.75?'var(--warn)':c.pct>=.5?'var(--serious)':'var(--crit)';
     return'<td class="num"'+(fut?' style="opacity:.45"':'')+'><div style="display:flex;align-items:center;gap:8px;justify-content:flex-end"><span>'+c.n+' / '+c.m+' <b>'+Math.round(c.pct*100)+'%</b></span><div class="pct-bar"><i style="width:'+Math.min(100,Math.round(c.pct*100))+'%;background:'+col+'"></i></div></div></td>'};
@@ -352,9 +368,14 @@ function renderPend(){
 
 function renderTop(){
   const byR={};nom.forEach(u=>byR[normR(u.rut)]=u);
-  const rows=Object.keys(D.porU).map(r=>{const u=byR[r]||{};const tk=normT(u.tecnico);return{n:D.porU[r],rut:u.rut||r,nombre:u.rut?((u.nombres||'')+' '+(u.apellidos||'')).trim():'(no está en la nómina)',tecnico:tk,sector:u.sector||''}}).filter(r=>!F.asesor||r.tecnico===F.asesor).sort((a,b)=>b.n-a.n).slice(0,15);
+  const nice=k=>{const t=D.T.find(x=>x.key===k);return t?t.abr:k};
+  const rows=Object.keys(D.porU).map(r=>{const u=byR[r]||{};const tk=keyDe(u.tecnico);const q=D.porUQuien[r]||{};const quien=Object.keys(q).sort((a,b)=>q[b]-q[a]);
+    return{n:D.porU[r],rut:u.rut||r,nombre:u.rut?((u.nombres||'')+' '+(u.apellidos||'')).trim():'(no está en la nómina)',tecnico:tk,quien,q,sector:u.sector||'',ajeno:quien.some(k=>k!==tk)}})
+    .filter(r=>!F.asesor||r.tecnico===F.asesor||r.quien.includes(F.asesor)).sort((a,b)=>b.n-a.n).slice(0,15);
   $('nTop').textContent='top '+rows.length;
-  $('tableTop').innerHTML=rows.length?'<table><tr><th class="num">Visitas</th><th>Usuario</th><th>RUT</th><th>Asesor asignado</th><th>Sector</th></tr>'+rows.map(r=>'<tr><td class="num"><b>'+r.n+'</b></td><td>'+esc(r.nombre)+'</td><td>'+esc(r.rut)+'</td><td>'+esc(r.tecnico)+'</td><td>'+esc(r.sector)+'</td></tr>').join('')+'</table>':'<p class="muted">Sin visitas en el período.</p>';
+  $('tableTop').innerHTML=rows.length?'<table><tr><th class="num">Visitas</th><th>Usuario</th><th>RUT</th><th>Quién visitó</th><th>Asesor asignado</th><th>Sector</th></tr>'
+    +rows.map(r=>'<tr><td class="num"><b>'+r.n+'</b></td><td>'+esc(r.nombre)+'</td><td>'+esc(r.rut)+'</td><td>'+r.quien.map(k=>'<span class="st '+(k===r.tecnico?'good':'na')+'" title="'+(k===r.tecnico?'Asesor asignado':'Otro asesor')+'">'+esc(nice(k))+' · '+r.q[k]+'</span>').join(' ')+'</td><td>'+esc(nice(r.tecnico))+'</td><td>'+esc(r.sector)+'</td></tr>').join('')+'</table><p class="muted">Verde = visita hecha por el asesor asignado; gris = por otro asesor.</p>'
+    :'<p class="muted">Sin visitas en el período.</p>';
 }
 
 // ---------- utilidades UI ----------
@@ -368,7 +389,7 @@ function initUI(){
   seg.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{F.per=b.dataset.v;seg.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));render()}));
   const y=new Date().getFullYear();$('fAnio').innerHTML=[y-1,y,y+1].map(v=>'<option value="'+v+'"'+(v===y?' selected':'')+'>'+v+'</option>').join('');
   $('fAnio').addEventListener('change',e=>{F.anio=+e.target.value;render()});
-  $('fAsesor').innerHTML='<option value="">Todos</option>'+tecnicos().filter(t=>t.cargo!=='Coordinador').map(t=>'<option value="'+t.key+'">'+esc(t.abr)+' — '+esc(t.cargo)+'</option>').join('');
+  $('fAsesor').innerHTML='<option value="">Todos</option>'+tecnicos().filter(conMeta).map(t=>'<option value="'+t.key+'">'+esc(t.abr)+' — '+esc(t.cargo)+'</option>').join('');
   $('fAsesor').addEventListener('change',e=>{F.asesor=e.target.value;render()});
   $('btnRefresh').addEventListener('click',cargar);
   $('btnCfg').addEventListener('click',()=>$('cfg').classList.toggle('open'));

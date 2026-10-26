@@ -1,0 +1,1449 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#1F4D2B">
+<title>Catastro RS — PRODESAL Peumo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --verde: #1F4D2B;
+    --verde-claro: #2E7D32;
+    --verde-pastel: #E8F5E9;
+    --dorado: #B8860B;
+    --dorado-claro: #FDF6E3;
+    --gris-fondo: #F5F5F0;
+    --gris-borde: #D0D0C8;
+    --gris-texto: #666;
+    --rojo: #B22222;
+    --amarillo: #D4A017;
+    --blanco: #FFFFFF;
+    --sombra: 0 2px 8px rgba(31,77,43,0.08);
+    --sombra-fuerte: 0 4px 16px rgba(31,77,43,0.15);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    font-family: 'Manrope', -apple-system, system-ui, sans-serif;
+    background: var(--gris-fondo);
+    color: #222;
+    font-size: 16px;
+    line-height: 1.5;
+    overscroll-behavior: none;
+  }
+
+  body { padding-bottom: 80px; }
+
+  /* ======== HEADER ======== */
+  header {
+    background: var(--verde);
+    color: var(--blanco);
+    padding: 14px 16px;
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--sombra);
+  }
+  header .top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+  header h1 {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+  }
+  header .sub {
+    font-size: 11px;
+    opacity: 0.85;
+    font-weight: 500;
+    margin-top: 2px;
+  }
+  .badge-sync {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--dorado);
+    color: var(--blanco);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    border: none;
+  }
+  .badge-sync.ok { background: var(--verde-claro); }
+
+  /* ======== TABS ======== */
+  nav.tabs {
+    display: flex;
+    background: var(--blanco);
+    border-bottom: 1px solid var(--gris-borde);
+    position: sticky;
+    top: 58px;
+    z-index: 90;
+  }
+  nav.tabs button {
+    flex: 1;
+    padding: 12px 8px;
+    border: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--gris-texto);
+    border-bottom: 3px solid transparent;
+    cursor: pointer;
+  }
+  nav.tabs button.active {
+    color: var(--verde);
+    border-bottom-color: var(--dorado);
+  }
+  nav.tabs button .count {
+    display: inline-block;
+    background: var(--verde-pastel);
+    color: var(--verde);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 10px;
+    margin-left: 4px;
+  }
+
+  /* ======== PANELS ======== */
+  .panel { display: none; padding: 16px; }
+  .panel.active { display: block; }
+
+  /* ======== FORMULARIO ======== */
+  .seccion {
+    background: var(--blanco);
+    border-radius: 12px;
+    margin-bottom: 14px;
+    box-shadow: var(--sombra);
+    overflow: hidden;
+  }
+  .seccion-header {
+    background: var(--verde);
+    color: var(--blanco);
+    padding: 12px 16px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+  .seccion-body { padding: 16px; }
+
+  .campo { margin-bottom: 14px; }
+  .campo:last-child { margin-bottom: 0; }
+  .campo label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--verde);
+    margin-bottom: 6px;
+  }
+  .campo input[type=text],
+  .campo input[type=tel],
+  .campo input[type=email],
+  .campo input[type=date],
+  .campo input[type=number],
+  .campo textarea,
+  .campo select {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1.5px solid var(--gris-borde);
+    border-radius: 8px;
+    font-family: inherit;
+    font-size: 15px;
+    background: var(--blanco);
+    color: #222;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .campo input:focus, .campo textarea:focus, .campo select:focus {
+    outline: none;
+    border-color: var(--verde-claro);
+    box-shadow: 0 0 0 3px rgba(46,125,50,0.15);
+  }
+  .campo textarea { resize: vertical; min-height: 70px; }
+  .campo select {
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='%231F4D2B'%3e%3cpath d='M6 9L1 4h10z'/%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+  .campo .ayuda {
+    font-size: 12px;
+    color: var(--gris-texto);
+    margin-top: 4px;
+  }
+  .fila { display: flex; gap: 10px; }
+  .fila .campo { flex: 1; }
+
+  /* ======== CHECKBOXES ======== */
+  .check-grupo { display: flex; flex-direction: column; gap: 8px; }
+  .check-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 12px;
+    border: 1.5px solid var(--gris-borde);
+    border-radius: 8px;
+    background: var(--blanco);
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: all 0.15s;
+  }
+  .check-item.checked {
+    border-color: var(--verde-claro);
+    background: var(--verde-pastel);
+  }
+  .check-item input {
+    width: 20px; height: 20px;
+    accent-color: var(--verde);
+    flex-shrink: 0;
+  }
+
+  /* ======== INFRAESTRUCTURA (3 opciones) ======== */
+  .infra-item {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 8px;
+    padding: 11px 0;
+    border-bottom: 1px solid var(--gris-borde);
+    align-items: center;
+  }
+  .infra-item:last-child { border-bottom: none; }
+  .infra-item .texto {
+    font-size: 14px;
+    font-weight: 500;
+  }
+  .infra-switches {
+    display: flex;
+    gap: 4px;
+  }
+  .infra-switches button {
+    width: 42px;
+    height: 36px;
+    border: 1.5px solid var(--gris-borde);
+    background: var(--blanco);
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .infra-switches button.ok { background: #4CAF50; color: white; border-color: #4CAF50; }
+  .infra-switches button.no { background: var(--rojo); color: white; border-color: var(--rojo); }
+  .infra-switches button.na { background: var(--gris-texto); color: white; border-color: var(--gris-texto); }
+
+  /* ======== SEMÁFORO ======== */
+  .semaforo { display: flex; gap: 8px; }
+  .semaforo button {
+    flex: 1;
+    padding: 14px 8px;
+    border: 2px solid var(--gris-borde);
+    background: var(--blanco);
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+  .semaforo button .emoji { font-size: 22px; }
+  .semaforo button.verde.active { border-color: #4CAF50; background: #E8F5E9; }
+  .semaforo button.amarillo.active { border-color: #D4A017; background: #FDF6E3; }
+  .semaforo button.rojo.active { border-color: var(--rojo); background: #FDE8E8; }
+
+  /* ======== BOTONES ======== */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 13px 20px;
+    border: none;
+    border-radius: 10px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    text-decoration: none;
+    transition: transform 0.1s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn-primario { background: var(--verde); color: var(--blanco); }
+  .btn-dorado { background: var(--dorado); color: var(--blanco); }
+  .btn-secundario { background: var(--blanco); color: var(--verde); border: 2px solid var(--verde); }
+  .btn-rojo { background: var(--rojo); color: var(--blanco); }
+  .btn-ancho { width: 100%; }
+
+  .acciones {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+  .acciones .btn { flex: 1; }
+
+  /* ======== LISTA FICHAS ======== */
+  .ficha-card {
+    background: var(--blanco);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 10px;
+    box-shadow: var(--sombra);
+    border-left: 4px solid var(--gris-borde);
+    position: relative;
+  }
+  .ficha-card.verde { border-left-color: #4CAF50; }
+  .ficha-card.amarillo { border-left-color: var(--amarillo); }
+  .ficha-card.rojo { border-left-color: var(--rojo); }
+  .ficha-card .nombre {
+    font-weight: 700;
+    font-size: 15px;
+    color: var(--verde);
+    margin-bottom: 2px;
+  }
+  .ficha-card .meta {
+    font-size: 12px;
+    color: var(--gris-texto);
+  }
+  .ficha-card .rubros {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-top: 8px;
+  }
+  .ficha-card .tag {
+    display: inline-block;
+    background: var(--verde-pastel);
+    color: var(--verde);
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 10px;
+  }
+  .ficha-card .acciones-card {
+    display: flex;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .ficha-card .btn-mini {
+    flex: 1;
+    padding: 7px 10px;
+    font-size: 12px;
+    border: none;
+    border-radius: 6px;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .btn-mini.editar { background: var(--verde); color: white; }
+  .btn-mini.ver { background: var(--dorado); color: white; }
+  .btn-mini.borrar { background: #FDE8E8; color: var(--rojo); }
+
+  .sync-badge {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 10px;
+  }
+  .sync-badge.pendiente { background: var(--dorado-claro); color: var(--dorado); }
+  .sync-badge.sincronizado { background: var(--verde-pastel); color: var(--verde); }
+
+  /* ======== PANEL RESUMEN ======== */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .stat-card {
+    background: var(--blanco);
+    padding: 14px;
+    border-radius: 12px;
+    box-shadow: var(--sombra);
+  }
+  .stat-card .num {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--verde);
+    line-height: 1.1;
+  }
+  .stat-card .lbl {
+    font-size: 12px;
+    color: var(--gris-texto);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+
+  .vacio {
+    text-align: center;
+    padding: 40px 20px;
+    color: var(--gris-texto);
+  }
+  .vacio .emoji { font-size: 48px; margin-bottom: 12px; }
+  .vacio .titulo { font-weight: 700; margin-bottom: 4px; color: #333; }
+
+  /* ======== MODAL ======== */
+  .modal-fondo {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 200;
+    align-items: flex-end;
+  }
+  .modal-fondo.open { display: flex; }
+  .modal {
+    background: var(--blanco);
+    width: 100%;
+    max-height: 90vh;
+    border-radius: 16px 16px 0 0;
+    padding: 20px;
+    overflow-y: auto;
+  }
+  .modal h3 {
+    color: var(--verde);
+    margin-bottom: 12px;
+    font-size: 18px;
+  }
+  .modal p { margin-bottom: 14px; font-size: 14px; }
+
+  /* ======== TOAST ======== */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--verde);
+    color: white;
+    padding: 12px 20px;
+    border-radius: 24px;
+    font-size: 14px;
+    font-weight: 600;
+    box-shadow: var(--sombra-fuerte);
+    z-index: 300;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .toast.show { opacity: 1; }
+  .toast.error { background: var(--rojo); }
+
+  /* ======== FOOTER FIJO ======== */
+  .fab {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    border-radius: 30px;
+    background: var(--dorado);
+    color: white;
+    border: none;
+    font-size: 30px;
+    font-weight: 700;
+    box-shadow: var(--sombra-fuerte);
+    cursor: pointer;
+    z-index: 50;
+  }
+
+  /* ======== INFO/AYUDA ======== */
+  .info-box {
+    background: var(--dorado-claro);
+    border-left: 4px solid var(--dorado);
+    padding: 12px 14px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #5c4a0b;
+    margin-bottom: 14px;
+  }
+
+  /* ======== SUGERENCIAS BÚSQUEDA ======== */
+  .sugerencias {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--blanco);
+    border: 1.5px solid var(--verde-claro);
+    border-radius: 8px;
+    margin-top: 4px;
+    max-height: 240px;
+    overflow-y: auto;
+    z-index: 60;
+    box-shadow: var(--sombra-fuerte);
+    display: none;
+  }
+  .sugerencias.open { display: block; }
+  .sugerencia-item {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--gris-borde);
+    cursor: pointer;
+    font-size: 14px;
+  }
+  .sugerencia-item:last-child { border-bottom: none; }
+  .sugerencia-item:active { background: var(--verde-pastel); }
+  .sugerencia-item .nom { font-weight: 700; color: var(--verde); }
+  .sugerencia-item .det { font-size: 11px; color: var(--gris-texto); margin-top: 2px; }
+  .sugerencia-item .origen {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 8px;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .sugerencia-item .origen.usuarios { background: var(--verde-pastel); color: var(--verde); }
+  .sugerencia-item .origen.catastro_rs { background: var(--dorado-claro); color: var(--dorado); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="top">
+    <div>
+      <h1>CATASTRO RESOLUCIÓN SANITARIA</h1>
+      <div class="sub">PRODESAL Peumo 2026</div>
+    </div>
+    <button class="badge-sync" id="btnSync" onclick="sincronizar()">
+      <span id="syncLabel">● Sin sync</span>
+    </button>
+  </div>
+</header>
+
+<nav class="tabs">
+  <button class="active" onclick="verTab('ficha', event)">📝 Ficha</button>
+  <button onclick="verTab('listado', event)">📋 Fichas <span class="count" id="cntListado">0</span></button>
+  <button onclick="verTab('resumen', event)">📊 Resumen</button>
+</nav>
+
+<!-- =============== PANEL FICHA =============== -->
+<div class="panel active" id="panel-ficha">
+
+  <!-- A. Identificación -->
+  <div class="seccion">
+    <div class="seccion-header">A · Identificación</div>
+    <div class="seccion-body">
+      <div class="campo" style="position:relative">
+        <label>Nombre completo *</label>
+        <input type="text" id="nombre" autocomplete="off" oninput="buscarUsuario('nombre')">
+        <div class="sugerencias" id="sugerenciasNombre"></div>
+      </div>
+      <div class="fila">
+        <div class="campo" style="position:relative">
+          <label>RUT</label>
+          <input type="text" id="rut" placeholder="12.345.678-9" autocomplete="off" oninput="buscarUsuario('rut')">
+          <div class="sugerencias" id="sugerenciasRut"></div>
+        </div>
+        <div class="campo">
+          <label>Teléfono</label>
+          <input type="tel" id="telefono" placeholder="+56 9" autocomplete="off">
+        </div>
+      </div>
+      <div class="campo">
+        <label>Correo electrónico</label>
+        <input type="email" id="correo" autocomplete="off">
+      </div>
+      <div class="campo">
+        <label>Dirección del predio *</label>
+        <input type="text" id="direccion" autocomplete="off">
+      </div>
+      <div class="fila">
+        <div class="campo">
+          <label>Sector / Localidad</label>
+          <input type="text" id="sector" autocomplete="off">
+        </div>
+        <div class="campo">
+          <label>Clave Única</label>
+          <select id="claveUnica">
+            <option value="">—</option>
+            <option value="Sí">Sí</option>
+            <option value="No">No</option>
+            <option value="No sabe">No sabe</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- B. Rubro -->
+  <div class="seccion">
+    <div class="seccion-header">B · Rubro y Productos</div>
+    <div class="seccion-body">
+      <div class="info-box">
+        Marque todos los rubros de alimentos elaborados que desarrolla el usuario.
+      </div>
+      <div class="check-grupo" id="rubros">
+        <label class="check-item"><input type="checkbox" value="Miel y apícola" onchange="togCheck(this)"> <span>🍯 Miel y subproductos apícolas</span></label>
+        <label class="check-item"><input type="checkbox" value="Mermeladas" onchange="togCheck(this)"> <span>🍓 Mermeladas y confituras</span></label>
+        <label class="check-item"><input type="checkbox" value="Conservas" onchange="togCheck(this)"> <span>🫙 Conservas en frascos</span></label>
+        <label class="check-item"><input type="checkbox" value="Deshidratados" onchange="togCheck(this)"> <span>🍎 Frutos u hortalizas deshidratados</span></label>
+        <label class="check-item"><input type="checkbox" value="Hierbas aromáticas" onchange="togCheck(this)"> <span>🌿 Hierbas aromáticas envasadas</span></label>
+        <label class="check-item"><input type="checkbox" value="Repostería" onchange="togCheck(this)"> <span>🧁 Repostería artesanal</span></label>
+        <label class="check-item"><input type="checkbox" value="Otro" onchange="togCheck(this)"> <span>⚙️ Otro rubro de alimentos elaborados</span></label>
+      </div>
+      <div class="campo" style="margin-top:14px">
+        <label>Productos específicos que elabora</label>
+        <textarea id="productos" placeholder="Ej. Miel multiflora 500g, mermelada de membrillo 250g..."></textarea>
+      </div>
+      <div class="campo">
+        <label>Volumen mensual estimado</label>
+        <input type="text" id="volumen" placeholder="Ej. 20 kg mermelada / 50 frascos miel">
+      </div>
+    </div>
+  </div>
+
+  <!-- C. Estado formalización -->
+  <div class="seccion">
+    <div class="seccion-header">C · Estado Formalización</div>
+    <div class="seccion-body">
+      <div class="campo">
+        <label>Estado SII</label>
+        <select id="estadoSII">
+          <option value="">—</option>
+          <option>No ha iniciado actividades</option>
+          <option>Registro de Subsistencia activo</option>
+          <option>Régimen Simplificado</option>
+          <option>Régimen General</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label>Estado MEF</label>
+        <select id="estadoMEF">
+          <option value="">—</option>
+          <option>No ha iniciado</option>
+          <option>En gestión en Municipalidad</option>
+          <option>Ordinario MEF obtenido</option>
+          <option>Patente MEF vigente</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label>Estado Resolución Sanitaria</label>
+        <select id="estadoRS">
+          <option value="">—</option>
+          <option>No ha iniciado</option>
+          <option>En preparación de antecedentes</option>
+          <option>Ingresada en SEREMI</option>
+          <option>Vigente</option>
+        </select>
+      </div>
+      <div class="fila">
+        <div class="campo">
+          <label>N° Registro SAG (si apicultor)</label>
+          <input type="text" id="sagNum">
+        </div>
+        <div class="campo">
+          <label>FRADA al día</label>
+          <select id="frada">
+            <option value="">—</option>
+            <option>No aplica</option>
+            <option>Sí</option>
+            <option>No</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- D. Infraestructura -->
+  <div class="seccion">
+    <div class="seccion-header">D · Infraestructura</div>
+    <div class="seccion-body">
+      <div class="info-box">
+        <strong>OK</strong> = Cumple · <strong>NO</strong> = No cumple · <strong>NA</strong> = No aplica
+      </div>
+      <div id="infra"></div>
+    </div>
+  </div>
+
+  <!-- E. Agua -->
+  <div class="seccion">
+    <div class="seccion-header">E · Agua y Servicios</div>
+    <div class="seccion-body">
+      <div class="campo">
+        <label>Fuente de agua potable</label>
+        <select id="agua">
+          <option value="">—</option>
+          <option>Red pública</option>
+          <option>APR con resolución vigente</option>
+          <option>Pozo/noria con resolución</option>
+          <option>Sin fuente autorizada</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label>Sistema aguas servidas</label>
+        <select id="aguasServ">
+          <option value="">—</option>
+          <option>Alcantarillado público</option>
+          <option>Fosa séptica con resolución</option>
+          <option>Fosa séptica sin resolución</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- F. Observaciones -->
+  <div class="seccion">
+    <div class="seccion-header">F · Observaciones</div>
+    <div class="seccion-body">
+      <div class="campo">
+        <label>Fortalezas observadas</label>
+        <textarea id="fortalezas"></textarea>
+      </div>
+      <div class="campo">
+        <label>Brechas por resolver</label>
+        <textarea id="brechas"></textarea>
+      </div>
+      <div class="campo">
+        <label>Inversión estimada ($)</label>
+        <input type="text" id="inversion" placeholder="Ej. 500.000">
+      </div>
+      <div class="campo">
+        <label>Instrumento INDAP sugerido</label>
+        <select id="indap">
+          <option value="">—</option>
+          <option>IFP</option>
+          <option>PRI</option>
+          <option>Capital de Trabajo</option>
+          <option>Otro</option>
+          <option>No requiere inversión</option>
+        </select>
+      </div>
+      <div class="campo">
+        <label>Próximo paso con este usuario</label>
+        <textarea id="proximoPaso"></textarea>
+      </div>
+    </div>
+  </div>
+
+  <!-- Semáforo -->
+  <div class="seccion">
+    <div class="seccion-header">Semáforo de Factibilidad *</div>
+    <div class="seccion-body">
+      <div class="semaforo" id="semaforo">
+        <button class="verde" onclick="setSemaforo('verde')">
+          <span class="emoji">🟢</span>
+          <span>Listo</span>
+        </button>
+        <button class="amarillo" onclick="setSemaforo('amarillo')">
+          <span class="emoji">🟡</span>
+          <span>Ajustes</span>
+        </button>
+        <button class="rojo" onclick="setSemaforo('rojo')">
+          <span class="emoji">🔴</span>
+          <span>Lejos</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="acciones">
+    <button class="btn btn-secundario" onclick="limpiarFicha()">Limpiar</button>
+    <button class="btn btn-primario" onclick="guardarFicha()">💾 Guardar</button>
+  </div>
+
+</div>
+
+<!-- =============== PANEL LISTADO =============== -->
+<div class="panel" id="panel-listado">
+  <div style="margin-bottom:12px">
+    <input type="text" id="buscador" placeholder="🔍 Buscar por nombre, sector o rubro..." style="width:100%;padding:12px;border:1.5px solid var(--gris-borde);border-radius:8px;font-size:14px;font-family:inherit" oninput="filtrarLista()">
+  </div>
+  <div id="lista"></div>
+</div>
+
+<!-- =============== PANEL RESUMEN =============== -->
+<div class="panel" id="panel-resumen">
+  <div class="stat-grid">
+    <div class="stat-card"><div class="num" id="st-total">0</div><div class="lbl">Fichas totales</div></div>
+    <div class="stat-card"><div class="num" id="st-pendientes">0</div><div class="lbl">Sin sincronizar</div></div>
+    <div class="stat-card"><div class="num" id="st-verde">0</div><div class="lbl">🟢 Listos</div></div>
+    <div class="stat-card"><div class="num" id="st-amarillo">0</div><div class="lbl">🟡 Ajustes</div></div>
+    <div class="stat-card"><div class="num" id="st-rojo">0</div><div class="lbl">🔴 Lejos</div></div>
+    <div class="stat-card"><div class="num" id="st-sin">0</div><div class="lbl">Sin evaluar</div></div>
+  </div>
+
+  <div class="seccion">
+    <div class="seccion-header">Por rubro</div>
+    <div class="seccion-body" id="porRubro"></div>
+  </div>
+
+  <div class="seccion">
+    <div class="seccion-header">Exportar y respaldar</div>
+    <div class="seccion-body">
+      <button class="btn btn-dorado btn-ancho" onclick="exportarCSV()" style="margin-bottom:10px">⬇ Descargar CSV</button>
+      <button class="btn btn-primario btn-ancho" onclick="exportarJSON()" style="margin-bottom:10px">⬇ Respaldar JSON</button>
+      <button class="btn btn-secundario btn-ancho" onclick="document.getElementById('importar').click()" style="margin-bottom:10px">⬆ Importar JSON</button>
+      <input type="file" id="importar" accept=".json" style="display:none" onchange="importarJSON(event)">
+      <button class="btn btn-rojo btn-ancho" onclick="borrarTodo()">🗑 Borrar todo</button>
+    </div>
+  </div>
+
+  <div class="seccion">
+    <div class="seccion-header">Configuración de sync (opcional)</div>
+    <div class="seccion-body">
+      <div class="info-box">
+        Pegue aquí la URL del Apps Script de PRODESAL para sincronizar automáticamente las fichas con la planilla central.
+      </div>
+      <div class="campo">
+        <label>URL Apps Script</label>
+        <input type="text" id="syncUrl" placeholder="https://script.google.com/..." onchange="guardarConfig()">
+      </div>
+      <div class="campo">
+        <label>Asesor PRODESAL</label>
+        <input type="text" id="asesorNombre" placeholder="Nombre del asesor" onchange="guardarConfig()">
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Botón flotante -->
+<button class="fab" onclick="verTab('ficha')" title="Nueva ficha" id="fab" style="display:none">+</button>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<!-- Modal ver ficha -->
+<div class="modal-fondo" id="modalVer" onclick="if(event.target===this)cerrarModal()">
+  <div class="modal" id="modalContenido"></div>
+</div>
+
+<script>
+// =================== ESTADO ===================
+const INFRA_ITEMS = [
+  "Área de elaboración separada de la cocina familiar",
+  "Pisos lavables",
+  "Paredes lavables",
+  "Cielo liso y lavable",
+  "Ventilación adecuada",
+  "Mallas en ventanas",
+  "Iluminación suficiente",
+  "Lavamanos independiente",
+  "Lavadero para utensilios",
+  "Mesón trabajo material no poroso",
+  "Agua potable disponible",
+  "Alcantarillado o fosa autorizada",
+  "Baño en condiciones",
+  "Bodega insumos separada",
+  "Bodega producto terminado",
+  "Sistema eliminación residuos",
+  "Refrigeración (si aplica)"
+];
+
+const KEY_FICHAS = 'rs_fichas_v1';
+const KEY_CONFIG = 'rs_config_v1';
+let fichaActual = { id: null, infra: {}, semaforo: null };
+let editandoId = null;
+
+// =================== INFRA RENDER ===================
+function renderInfra() {
+  const cont = document.getElementById('infra');
+  cont.innerHTML = INFRA_ITEMS.map((item, i) => `
+    <div class="infra-item">
+      <div class="texto">${item}</div>
+      <div class="infra-switches">
+        <button type="button" onclick="setInfra(${i},'ok')" id="infra-${i}-ok">✓</button>
+        <button type="button" onclick="setInfra(${i},'no')" id="infra-${i}-no">✗</button>
+        <button type="button" onclick="setInfra(${i},'na')" id="infra-${i}-na">—</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function setInfra(i, val) {
+  fichaActual.infra[i] = val;
+  ['ok','no','na'].forEach(v => {
+    document.getElementById(`infra-${i}-${v}`).classList.remove(v);
+  });
+  document.getElementById(`infra-${i}-${val}`).classList.add(val);
+}
+
+function cargarInfra(infraData) {
+  for (let i = 0; i < INFRA_ITEMS.length; i++) {
+    ['ok','no','na'].forEach(v => {
+      const el = document.getElementById(`infra-${i}-${v}`);
+      if (el) el.classList.remove(v);
+    });
+  }
+  Object.entries(infraData || {}).forEach(([i, val]) => {
+    const el = document.getElementById(`infra-${i}-${val}`);
+    if (el) el.classList.add(val);
+  });
+}
+
+// =================== CHECKBOX RUBROS ===================
+function togCheck(el) {
+  el.closest('.check-item').classList.toggle('checked', el.checked);
+}
+
+// =================== SEMÁFORO ===================
+function setSemaforo(val) {
+  fichaActual.semaforo = val;
+  document.querySelectorAll('#semaforo button').forEach(b => b.classList.remove('active'));
+  document.querySelector(`#semaforo button.${val}`).classList.add('active');
+}
+
+// =================== TABS ===================
+function verTab(tab, ev) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav.tabs button').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + tab).classList.add('active');
+  if (ev) ev.target.closest('button').classList.add('active');
+  else document.querySelectorAll('nav.tabs button')[0].classList.add('active');
+  window.scrollTo(0, 0);
+  document.getElementById('fab').style.display = tab === 'listado' ? 'block' : 'none';
+  if (tab === 'listado') renderLista();
+  if (tab === 'resumen') renderResumen();
+}
+
+// =================== GUARDAR FICHA ===================
+function guardarFicha() {
+  const nombre = document.getElementById('nombre').value.trim();
+  const direccion = document.getElementById('direccion').value.trim();
+  if (!nombre || !direccion) {
+    toast('Nombre y dirección son obligatorios', 'error');
+    return;
+  }
+  if (!fichaActual.semaforo) {
+    toast('Marque el semáforo de factibilidad', 'error');
+    return;
+  }
+
+  const rubros = Array.from(document.querySelectorAll('#rubros input:checked')).map(i => i.value);
+  const config = cargarConfig();
+
+  const ficha = {
+    id: editandoId || ('f_' + Date.now() + '_' + Math.random().toString(36).slice(2,6)),
+    fechaVisita: new Date().toISOString(),
+    asesor: config.asesorNombre || '',
+    nombre,
+    rut: document.getElementById('rut').value.trim(),
+    telefono: document.getElementById('telefono').value.trim(),
+    correo: document.getElementById('correo').value.trim(),
+    direccion,
+    sector: document.getElementById('sector').value.trim(),
+    claveUnica: document.getElementById('claveUnica').value,
+    rubros,
+    productos: document.getElementById('productos').value.trim(),
+    volumen: document.getElementById('volumen').value.trim(),
+    estadoSII: document.getElementById('estadoSII').value,
+    estadoMEF: document.getElementById('estadoMEF').value,
+    estadoRS: document.getElementById('estadoRS').value,
+    sagNum: document.getElementById('sagNum').value.trim(),
+    frada: document.getElementById('frada').value,
+    infra: fichaActual.infra,
+    agua: document.getElementById('agua').value,
+    aguasServ: document.getElementById('aguasServ').value,
+    fortalezas: document.getElementById('fortalezas').value.trim(),
+    brechas: document.getElementById('brechas').value.trim(),
+    inversion: document.getElementById('inversion').value.trim(),
+    indap: document.getElementById('indap').value,
+    proximoPaso: document.getElementById('proximoPaso').value.trim(),
+    semaforo: fichaActual.semaforo,
+    sincronizado: false
+  };
+
+  const fichas = cargarFichas();
+  if (editandoId) {
+    const idx = fichas.findIndex(f => f.id === editandoId);
+    if (idx >= 0) fichas[idx] = ficha;
+  } else {
+    fichas.push(ficha);
+  }
+  guardarFichas(fichas);
+
+  toast(editandoId ? 'Ficha actualizada' : 'Ficha guardada');
+  limpiarFicha();
+  verTab('listado');
+}
+
+// =================== STORAGE ===================
+function cargarFichas() {
+  try { return JSON.parse(localStorage.getItem(KEY_FICHAS) || '[]'); }
+  catch(e) { return []; }
+}
+function guardarFichas(f) {
+  localStorage.setItem(KEY_FICHAS, JSON.stringify(f));
+  actualizarContadores();
+}
+function cargarConfig() {
+  try { return JSON.parse(localStorage.getItem(KEY_CONFIG) || '{}'); }
+  catch(e) { return {}; }
+}
+function guardarConfig() {
+  const cfg = {
+    syncUrl: document.getElementById('syncUrl').value.trim(),
+    asesorNombre: document.getElementById('asesorNombre').value.trim()
+  };
+  localStorage.setItem(KEY_CONFIG, JSON.stringify(cfg));
+  toast('Configuración guardada');
+}
+
+// =================== LIMPIAR ===================
+function limpiarFicha() {
+  ['nombre','rut','telefono','correo','direccion','sector','productos','volumen',
+   'sagNum','fortalezas','brechas','inversion','proximoPaso'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  ['claveUnica','estadoSII','estadoMEF','estadoRS','frada','agua','aguasServ','indap'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  document.querySelectorAll('#rubros input').forEach(i => {
+    i.checked = false;
+    i.closest('.check-item').classList.remove('checked');
+  });
+  fichaActual = { id: null, infra: {}, semaforo: null };
+  document.querySelectorAll('#semaforo button').forEach(b => b.classList.remove('active'));
+  cargarInfra({});
+  editandoId = null;
+  window.scrollTo(0, 0);
+}
+
+// =================== LISTA ===================
+function renderLista(filtro = '') {
+  const fichas = cargarFichas().sort((a,b) => new Date(b.fechaVisita) - new Date(a.fechaVisita));
+  const cont = document.getElementById('lista');
+  const f = filtro.toLowerCase();
+  const filtradas = fichas.filter(x =>
+    !f || x.nombre.toLowerCase().includes(f) ||
+    (x.sector || '').toLowerCase().includes(f) ||
+    (x.rubros || []).join(' ').toLowerCase().includes(f)
+  );
+
+  if (filtradas.length === 0) {
+    cont.innerHTML = `<div class="vacio">
+      <div class="emoji">📋</div>
+      <div class="titulo">${fichas.length === 0 ? 'Sin fichas aún' : 'Sin resultados'}</div>
+      <div>${fichas.length === 0 ? 'Vaya a la pestaña Ficha para comenzar' : 'Pruebe otro término'}</div>
+    </div>`;
+    return;
+  }
+
+  cont.innerHTML = filtradas.map(x => `
+    <div class="ficha-card ${x.semaforo || ''}">
+      <span class="sync-badge ${x.sincronizado ? 'sincronizado' : 'pendiente'}">
+        ${x.sincronizado ? '✓ Sync' : '● Pend'}
+      </span>
+      <div class="nombre">${escapar(x.nombre)}</div>
+      <div class="meta">${escapar(x.sector || '—')} · ${new Date(x.fechaVisita).toLocaleDateString('es-CL')}</div>
+      <div class="rubros">
+        ${(x.rubros || []).map(r => `<span class="tag">${escapar(r)}</span>`).join('')}
+      </div>
+      <div class="acciones-card">
+        <button class="btn-mini ver" onclick="verFicha('${x.id}')">👁 Ver</button>
+        <button class="btn-mini editar" onclick="editarFicha('${x.id}')">✎ Editar</button>
+        <button class="btn-mini borrar" onclick="borrarFicha('${x.id}')">🗑</button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function filtrarLista() {
+  renderLista(document.getElementById('buscador').value);
+}
+
+function escapar(s) {
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// =================== VER / EDITAR / BORRAR ===================
+function verFicha(id) {
+  const f = cargarFichas().find(x => x.id === id);
+  if (!f) return;
+  const sem = { verde: '🟢 LISTO', amarillo: '🟡 AJUSTES', rojo: '🔴 LEJOS' }[f.semaforo] || '—';
+  const cont = document.getElementById('modalContenido');
+  cont.innerHTML = `
+    <h3>${escapar(f.nombre)}</h3>
+    <p><strong>Estado:</strong> ${sem}</p>
+    <p><strong>Visita:</strong> ${new Date(f.fechaVisita).toLocaleString('es-CL')}</p>
+    <p><strong>Dirección:</strong> ${escapar(f.direccion)}<br>
+       <strong>Sector:</strong> ${escapar(f.sector || '—')}<br>
+       <strong>Teléfono:</strong> ${escapar(f.telefono || '—')}</p>
+    <p><strong>Rubros:</strong> ${(f.rubros || []).join(', ') || '—'}</p>
+    <p><strong>Productos:</strong> ${escapar(f.productos || '—')}</p>
+    <p><strong>SII:</strong> ${escapar(f.estadoSII || '—')}<br>
+       <strong>MEF:</strong> ${escapar(f.estadoMEF || '—')}<br>
+       <strong>RS:</strong> ${escapar(f.estadoRS || '—')}</p>
+    <p><strong>Agua:</strong> ${escapar(f.agua || '—')}<br>
+       <strong>Aguas servidas:</strong> ${escapar(f.aguasServ || '—')}</p>
+    <p><strong>Brechas:</strong> ${escapar(f.brechas || '—')}</p>
+    <p><strong>Próximo paso:</strong> ${escapar(f.proximoPaso || '—')}</p>
+    <button class="btn btn-primario btn-ancho" onclick="cerrarModal()" style="margin-top:12px">Cerrar</button>
+  `;
+  document.getElementById('modalVer').classList.add('open');
+}
+
+function cerrarModal() {
+  document.getElementById('modalVer').classList.remove('open');
+}
+
+function editarFicha(id) {
+  const f = cargarFichas().find(x => x.id === id);
+  if (!f) return;
+  verTab('ficha');
+  editandoId = id;
+  document.getElementById('nombre').value = f.nombre || '';
+  document.getElementById('rut').value = f.rut || '';
+  document.getElementById('telefono').value = f.telefono || '';
+  document.getElementById('correo').value = f.correo || '';
+  document.getElementById('direccion').value = f.direccion || '';
+  document.getElementById('sector').value = f.sector || '';
+  document.getElementById('claveUnica').value = f.claveUnica || '';
+  document.getElementById('productos').value = f.productos || '';
+  document.getElementById('volumen').value = f.volumen || '';
+  document.getElementById('estadoSII').value = f.estadoSII || '';
+  document.getElementById('estadoMEF').value = f.estadoMEF || '';
+  document.getElementById('estadoRS').value = f.estadoRS || '';
+  document.getElementById('sagNum').value = f.sagNum || '';
+  document.getElementById('frada').value = f.frada || '';
+  document.getElementById('agua').value = f.agua || '';
+  document.getElementById('aguasServ').value = f.aguasServ || '';
+  document.getElementById('fortalezas').value = f.fortalezas || '';
+  document.getElementById('brechas').value = f.brechas || '';
+  document.getElementById('inversion').value = f.inversion || '';
+  document.getElementById('indap').value = f.indap || '';
+  document.getElementById('proximoPaso').value = f.proximoPaso || '';
+
+  // Rubros
+  document.querySelectorAll('#rubros input').forEach(i => {
+    i.checked = (f.rubros || []).includes(i.value);
+    i.closest('.check-item').classList.toggle('checked', i.checked);
+  });
+
+  fichaActual.infra = { ...(f.infra || {}) };
+  cargarInfra(fichaActual.infra);
+  if (f.semaforo) setSemaforo(f.semaforo);
+  else fichaActual.semaforo = null;
+  toast('Editando ficha');
+}
+
+function borrarFicha(id) {
+  if (!confirm('¿Eliminar esta ficha?')) return;
+  guardarFichas(cargarFichas().filter(x => x.id !== id));
+  renderLista(document.getElementById('buscador').value);
+  toast('Ficha eliminada');
+}
+
+// =================== RESUMEN ===================
+function renderResumen() {
+  const fichas = cargarFichas();
+  document.getElementById('st-total').textContent = fichas.length;
+  document.getElementById('st-pendientes').textContent = fichas.filter(f => !f.sincronizado).length;
+  document.getElementById('st-verde').textContent = fichas.filter(f => f.semaforo === 'verde').length;
+  document.getElementById('st-amarillo').textContent = fichas.filter(f => f.semaforo === 'amarillo').length;
+  document.getElementById('st-rojo').textContent = fichas.filter(f => f.semaforo === 'rojo').length;
+  document.getElementById('st-sin').textContent = fichas.filter(f => !f.semaforo).length;
+
+  const porRubro = {};
+  fichas.forEach(f => (f.rubros || []).forEach(r => porRubro[r] = (porRubro[r] || 0) + 1));
+  const cont = document.getElementById('porRubro');
+  if (Object.keys(porRubro).length === 0) {
+    cont.innerHTML = '<p style="color:var(--gris-texto);text-align:center">Sin datos aún</p>';
+  } else {
+    cont.innerHTML = Object.entries(porRubro).sort((a,b) => b[1]-a[1]).map(([r,n]) => `
+      <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--gris-borde)">
+        <span style="font-weight:600">${escapar(r)}</span>
+        <span style="color:var(--verde);font-weight:800">${n}</span>
+      </div>
+    `).join('');
+  }
+}
+
+// =================== CONTADORES ===================
+function actualizarContadores() {
+  const fichas = cargarFichas();
+  document.getElementById('cntListado').textContent = fichas.length;
+  const pend = fichas.filter(f => !f.sincronizado).length;
+  const btn = document.getElementById('btnSync');
+  const lbl = document.getElementById('syncLabel');
+  if (pend === 0 && fichas.length > 0) {
+    btn.classList.add('ok');
+    lbl.textContent = '✓ ' + fichas.length + ' sync';
+  } else {
+    btn.classList.remove('ok');
+    lbl.textContent = '● ' + pend + ' pend';
+  }
+}
+
+// =================== CSV ===================
+function exportarCSV() {
+  const fichas = cargarFichas();
+  if (fichas.length === 0) { toast('No hay fichas', 'error'); return; }
+
+  const campos = [
+    'fechaVisita','asesor','nombre','rut','telefono','correo','direccion','sector','claveUnica',
+    'rubros','productos','volumen',
+    'estadoSII','estadoMEF','estadoRS','sagNum','frada',
+    'agua','aguasServ',
+    'fortalezas','brechas','inversion','indap','proximoPaso','semaforo'
+  ];
+  // Añadir columnas de infra
+  INFRA_ITEMS.forEach((item, i) => campos.push('infra_' + (i+1) + '_' + item.substring(0, 25).replace(/,/g, ' ')));
+
+  const escapeCSV = v => {
+    if (v == null) return '';
+    const s = String(v).replace(/"/g, '""');
+    return /[,"\n;]/.test(s) ? `"${s}"` : s;
+  };
+
+  const header = campos.map(escapeCSV).join(',');
+  const filas = fichas.map(f => {
+    const base = {
+      ...f,
+      rubros: (f.rubros || []).join(' | '),
+      fechaVisita: new Date(f.fechaVisita).toLocaleString('es-CL')
+    };
+    const row = campos.slice(0, 25).map(c => escapeCSV(base[c]));
+    INFRA_ITEMS.forEach((_, i) => row.push(escapeCSV((f.infra || {})[i] || '')));
+    return row.join(',');
+  });
+
+  const bom = '﻿';
+  const csv = bom + [header, ...filas].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  descargar(blob, 'catastro_rs_' + fechaStr() + '.csv');
+  toast('CSV descargado');
+}
+
+function exportarJSON() {
+  const data = {
+    exportado: new Date().toISOString(),
+    version: 1,
+    fichas: cargarFichas()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  descargar(blob, 'catastro_rs_' + fechaStr() + '.json');
+  toast('Respaldo descargado');
+}
+
+function importarJSON(ev) {
+  const file = ev.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.fichas || !Array.isArray(data.fichas)) throw new Error('Formato inválido');
+      if (!confirm(`¿Importar ${data.fichas.length} fichas? Esto reemplazará las actuales.`)) return;
+      guardarFichas(data.fichas);
+      renderResumen();
+      toast('Importación exitosa');
+    } catch(err) {
+      toast('Archivo inválido: ' + err.message, 'error');
+    }
+  };
+  reader.readAsText(file);
+  ev.target.value = '';
+}
+
+function borrarTodo() {
+  if (!confirm('¿Borrar TODAS las fichas? Esta acción no se puede deshacer.')) return;
+  if (!confirm('¿Está realmente seguro? Respalde en JSON primero si es necesario.')) return;
+  guardarFichas([]);
+  renderResumen();
+  toast('Todas las fichas eliminadas');
+}
+
+function descargar(blob, nombre) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = nombre;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 100);
+}
+
+function fechaStr() {
+  const d = new Date();
+  return `${d.getFullYear()}${String(d.getMonth()+1).padStart(2,'0')}${String(d.getDate()).padStart(2,'0')}_${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')}`;
+}
+
+// =================== BÚSQUEDA USUARIO (Apps Script) ===================
+let busquedaTimer;
+let ultimaBusqueda = '';
+
+function buscarUsuario(tipo) {
+  clearTimeout(busquedaTimer);
+  const input = document.getElementById(tipo);
+  const q = input.value.trim();
+  const cont = document.getElementById('sugerencias' + tipo.charAt(0).toUpperCase() + tipo.slice(1));
+
+  if (q.length < 3) {
+    cont.classList.remove('open');
+    cont.innerHTML = '';
+    return;
+  }
+  if (q === ultimaBusqueda) return;
+
+  busquedaTimer = setTimeout(async () => {
+    const cfg = cargarConfig();
+    if (!cfg.syncUrl) return;  // Sin sync configurado, sigue funcionando offline
+
+    ultimaBusqueda = q;
+    try {
+      const url = cfg.syncUrl + '?action=catastro_rs_buscar&q=' + encodeURIComponent(q);
+      const resp = await fetch(url);
+      const data = await resp.json();
+
+      if (!data.ok || !data.resultados || data.resultados.length === 0) {
+        cont.innerHTML = '<div class="sugerencia-item" style="color:var(--gris-texto);cursor:default"><em>Sin coincidencias</em></div>';
+        cont.classList.add('open');
+        setTimeout(() => cont.classList.remove('open'), 2000);
+        return;
+      }
+
+      cont.innerHTML = data.resultados.map((r, i) => {
+        const origenLbl = r.origen === 'usuarios' ? 'PRODESAL' : 'Ficha previa';
+        const det = [r.sector, r.rubro || (r.rubros || '')].filter(x => x).join(' · ');
+        return `<div class="sugerencia-item" onclick="aplicarSugerencia(${i})">
+          <div><span class="nom">${escapar(r.nombre)}</span>
+            <span class="origen ${r.origen}">${origenLbl}</span></div>
+          <div class="det">${escapar(r.rut || '')} ${det ? '· ' + escapar(det) : ''}</div>
+        </div>`;
+      }).join('');
+      cont.classList.add('open');
+      window._sugerenciasData = data.resultados;
+    } catch (err) {
+      // Falla silenciosa — la app sigue siendo usable offline
+      console.warn('Búsqueda falló:', err);
+    }
+  }, 400);
+}
+
+function aplicarSugerencia(idx) {
+  const r = (window._sugerenciasData || [])[idx];
+  if (!r) return;
+
+  document.getElementById('nombre').value = r.nombre || '';
+  document.getElementById('rut').value = r.rut || '';
+  if (r.telefono) document.getElementById('telefono').value = r.telefono;
+  if (r.direccion) document.getElementById('direccion').value = r.direccion;
+  if (r.sector) document.getElementById('sector').value = r.sector;
+
+  // Si viene de catastro previo, cargar más datos (snake_case desde Apps Script)
+  if (r.origen === 'catastro_rs') {
+    if (r.correo) document.getElementById('correo').value = r.correo;
+    if (r.productos) document.getElementById('productos').value = r.productos;
+    if (r.volumen) document.getElementById('volumen').value = r.volumen;
+    if (r.estado_sii) document.getElementById('estadoSII').value = r.estado_sii;
+    if (r.estado_mef) document.getElementById('estadoMEF').value = r.estado_mef;
+    if (r.estado_rs) document.getElementById('estadoRS').value = r.estado_rs;
+    if (r.sag_num) document.getElementById('sagNum').value = r.sag_num;
+    if (r.frada) document.getElementById('frada').value = r.frada;
+    if (r.agua) document.getElementById('agua').value = r.agua;
+    if (r.aguas_servidas) document.getElementById('aguasServ').value = r.aguas_servidas;
+    if (r.brechas) document.getElementById('brechas').value = r.brechas;
+    toast('✓ Datos de ficha anterior cargados');
+  } else {
+    toast('✓ Datos PRODESAL cargados');
+  }
+
+  // Rubros desde campo "rubros" si viene de catastro
+  if (r.rubros && typeof r.rubros === 'string') {
+    const rubrosArr = r.rubros.split('|').map(x => x.trim());
+    document.querySelectorAll('#rubros input').forEach(i => {
+      i.checked = rubrosArr.includes(i.value);
+      i.closest('.check-item').classList.toggle('checked', i.checked);
+    });
+  }
+
+  // Cerrar sugerencias
+  document.querySelectorAll('.sugerencias').forEach(s => s.classList.remove('open'));
+}
+
+// Cerrar sugerencias al tocar afuera
+document.addEventListener('click', (e) => {
+  if (!e.target.closest('.campo')) {
+    document.querySelectorAll('.sugerencias').forEach(s => s.classList.remove('open'));
+  }
+});
+
+// =================== SYNC (Apps Script) ===================
+async function sincronizar() {
+  const cfg = cargarConfig();
+  const fichas = cargarFichas();
+  const pendientes = fichas.filter(f => !f.sincronizado);
+
+  if (pendientes.length === 0) {
+    toast(fichas.length === 0 ? 'No hay fichas' : 'Todo sincronizado');
+    return;
+  }
+
+  if (!cfg.syncUrl) {
+    toast('Configure URL de sync en Resumen', 'error');
+    verTab('resumen');
+    return;
+  }
+
+  toast('Sincronizando ' + pendientes.length + '...');
+
+  try {
+    const resp = await fetch(cfg.syncUrl + '?action=catastro_rs_write', {
+      method: 'POST',
+      body: JSON.stringify({ fichas: pendientes })
+    });
+
+    // Si el Apps Script responde ok (puede ser modo no-cors)
+    const todas = fichas.map(f => f.sincronizado ? f : { ...f, sincronizado: true });
+    guardarFichas(todas);
+    toast('✓ Sincronizadas: ' + pendientes.length);
+    renderLista(document.getElementById('buscador').value);
+    actualizarContadores();
+  } catch (err) {
+    toast('Error de sync: ' + err.message, 'error');
+  }
+}
+
+// =================== TOAST ===================
+let toastTimer;
+function toast(msg, tipo = '') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (tipo ? ' ' + tipo : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+// =================== INIT ===================
+window.addEventListener('load', () => {
+  renderInfra();
+  const cfg = cargarConfig();
+  document.getElementById('syncUrl').value = cfg.syncUrl || '';
+  document.getElementById('asesorNombre').value = cfg.asesorNombre || '';
+  actualizarContadores();
+
+  // Aviso al salir si hay cambios sin sincronizar
+  window.addEventListener('beforeunload', (e) => {
+    const pend = cargarFichas().filter(f => !f.sincronizado).length;
+    if (pend > 0) {
+      e.preventDefault();
+      e.returnValue = `Tiene ${pend} fichas sin sincronizar.`;
+    }
+  });
+});
+</script>
+</body>
+</html>

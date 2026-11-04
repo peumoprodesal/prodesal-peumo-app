@@ -1758,15 +1758,15 @@ async function gI(periodo,formato){
   body.push(secTitle('Visitas técnicas'));
   body.push(texto('En el marco de la estructura definida por INDAP, las visitas del '+asesorCargo.toLowerCase()+' tienen como propósito la evaluación en terreno, la entrega de información al usuario y la validación de rendiciones o avances de proyectos. Durante el período se realizaron '+vt.length+' visita'+(vt.length===1?'':'s')+' técnica'+(vt.length===1?'':'s')+'.'));
   if(vt.length){
-    const cw=[1500,1400,3600,1500,1000,900];
+    const cw=[1350,1250,3900,1400,1100,900];
     const hd=['Fecha','RUT','Agricultor/a','Tipo','Asesor','Folio'];
-    const rows=[new D.TableRow({tableHeader:true,children:hd.map((t,i)=>cell(par(run(t.toUpperCase(),{bold:true,size:16,color:'FFFFFF',characterSpacing:10}),{spacing:{after:0},alignment:i>=4?D.AlignmentType.CENTER:D.AlignmentType.LEFT}),{width:{size:cw[i],type:D.WidthType.DXA},shading:{fill:NAVY,type:D.ShadingType.CLEAR}}))})];
+    const rows=[new D.TableRow({tableHeader:true,children:hd.map((t,i)=>cell(par(run(t.toUpperCase(),{bold:true,size:14,color:'FFFFFF',characterSpacing:8}),{spacing:{after:0},alignment:i>=4?D.AlignmentType.CENTER:D.AlignmentType.LEFT}),{width:{size:cw[i],type:D.WidthType.DXA},shading:{fill:NAVY,type:D.ShadingType.CLEAR},margins:{top:40,bottom:40,left:80,right:80}}))})];
     vt.forEach((v,r)=>{
       const vals=[fmtCorto(v.fecha),v.rut||'',v.agricultor||'','Asesoría técnica',v.asesor||ab,v.folio||''];
-      rows.push(new D.TableRow({cantSplit:true,children:vals.map((t,i)=>cell(par(run(t,{size:18}),{spacing:{after:0},alignment:i>=4?D.AlignmentType.CENTER:D.AlignmentType.LEFT}),
-        {width:{size:cw[i],type:D.WidthType.DXA},shading:r%2?{fill:LIGHT,type:D.ShadingType.CLEAR}:undefined,borders:{...noB,bottom:{style:D.BorderStyle.SINGLE,size:4,color:LINE}}}))}));
+      rows.push(new D.TableRow({cantSplit:true,children:vals.map((t,i)=>cell(par(run(t,{size:16}),{spacing:{after:0},alignment:i>=4?D.AlignmentType.CENTER:D.AlignmentType.LEFT}),
+        {width:{size:cw[i],type:D.WidthType.DXA},margins:{top:30,bottom:30,left:80,right:80},shading:r%2?{fill:LIGHT,type:D.ShadingType.CLEAR}:undefined,borders:{...noB,bottom:{style:D.BorderStyle.SINGLE,size:4,color:LINE}}}))}));
     });
-    body.push(new D.Table({rows,width:{size:W,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED}));
+    body.push(new D.Table({rows,columnWidths:cw,width:{size:W,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED}));
     const obs=esSem?vt.filter(v=>(v.observacion||'').trim()):[];
     if(obs.length){
       body.push(par(run('Observaciones técnicas',{bold:true,size:21,color:NAVY}),{spacing:{before:240,after:100},keepNext:true}));
@@ -1971,7 +1971,7 @@ async function gPDF(periodo,tipo){
         +'<p class="mt" style="font-style:italic">Usuarios = usuarios del rubro en la cartera del asesor (todo el programa para asesor profesional y coordinador) · Visitados = usuarios distintos con visita técnica en el período.</p>'}
     html+=sec('Visitas técnicas')+'<p class="j">En el marco de la estructura definida por INDAP, las visitas del '+esc(asesorCargo.toLowerCase())+' tienen como propósito la evaluación en terreno, la entrega de información al usuario y la validación de rendiciones o avances de proyectos. Durante el período se realizaron '+vt.length+' visita'+(vt.length===1?'':'s')+' técnica'+(vt.length===1?'':'s')+'.</p>';
     if(vt.length){
-      html+='<table class="vis"><thead><tr><th>Fecha</th><th>RUT</th><th>Agricultor/a</th><th>Tipo</th><th class="c">Asesor</th><th class="c">Folio</th></tr></thead><tbody>'
+      html+='<table class="vis" style="font-size:8pt"><thead><tr><th>Fecha</th><th>RUT</th><th>Agricultor/a</th><th>Tipo</th><th class="c">Asesor</th><th class="c">Folio</th></tr></thead><tbody>'
         +vt.map(v=>'<tr><td>'+esc(fmtCorto(v.fecha))+'</td><td>'+esc(v.rut)+'</td><td>'+esc(v.agricultor)+'</td><td>Asesoría técnica</td><td class="c">'+esc(v.asesor||ab)+'</td><td class="c">'+esc(v.folio)+'</td></tr>').join('')+'</tbody></table>';
       const obs=esSem?vt.filter(v=>(v.observacion||'').trim()):[];
       if(obs.length) html+='<h3>Observaciones técnicas</h3>'+obs.map(v=>'<p class="j obs"><b>'+esc(v.agricultor)+'</b><span class="mt"> · '+esc(fmtLargo(v.fecha))+'</span><br>'+esc(v.observacion.trim())+'</p>').join('');

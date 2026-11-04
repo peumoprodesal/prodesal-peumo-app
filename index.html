@@ -1210,6 +1210,7 @@ function rInf(){
   const myVis=vis.filter(v=>normT(v.asesor)===normT(cfg.abr)||!v.asesor);
   const vs_=vis.filter(v=>v.fecha&&wk(new Date(v.fecha+'T12:00:00'))===sem);
   const vm=vis.filter(v=>v.fecha&&new Date(v.fecha+'T12:00:00').getMonth()===mi);
+  const nT=s=>(s||'').replace(/\.\s*/g,'.').toUpperCase().trim();const mias=a=>a.filter(v=>nT(v.asesor)===nT(cfg.abr)).length;
 
   return `
     <b style="font-size:15px;display:block" class="mb">📄 Generar Informes</b>
@@ -1235,7 +1236,7 @@ function rInf(){
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <span class="mu">Semana</span>
         <input type="number" class="ip" id="gs" value="${sem}" min="1" max="53" style="width:65px;display:inline-block" onchange="gsSel=+this.value;R()">
-        <span class="mu">(${vs_.length} visitas totales)</span>
+        <span class="mu" id="cntSem">(${mias(vs_)} mías · ${vs_.length} del equipo)</span>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="bt bt-g bt-s" onclick="gI('sem','mun')">📝 Informe .docx</button>
@@ -1266,7 +1267,7 @@ function rInf(){
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <span class="mu">Mes</span>
         <select class="ip" id="gm" style="width:130px;display:inline-block" onchange="gmSel=+this.value;R()">${MESES.map((m,i)=>'<option value="'+i+'" '+(i===mi?'selected':'')+'>'+m[0].toUpperCase()+m.slice(1)+'</option>').join('')}</select>
-        <span class="mu">(${vm.length} visitas totales)</span>
+        <span class="mu" id="cntMes">(${mias(vm)} mías · ${vm.length} del equipo)</span>
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="bt bt-g bt-s" onclick="gI('mes','mun')">📝 Informe .docx</button>

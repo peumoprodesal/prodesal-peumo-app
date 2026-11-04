@@ -154,6 +154,7 @@ const EQUIPO=[
 ];
 // Nombre completo (dos apellidos) para informes: se guarda en cfg.nombres y se edita en Config
 const nombreCompleto=abr=>{const e=EQUIPO.find(x=>x.abr===abr);const g=(cfg.nombres||{})[abr];return g||(e?e.completo||e.nombre:abr)};
+const rutDe=abr=>((cfg.ruts||{})[abr])||(abr===cfg.abr?cfg.rut:'')||'';
 const CARGOS=["Asesor Técnico","Asesor Profesional","Coordinador"];
 
 // Storage
@@ -568,6 +569,9 @@ function rCfg(){
           ${EQUIPO.map(e=>`<option value="${h(e.nombre)}" ${cfg.nombre===e.nombre?'selected':''}>${e.nombre}</option>`).join('')}
         </select>
       </label>
+      <label class="f"><span>RUT (aparece en el informe INDAP)</span>
+        <input class="ip" id="cRut" value="${h(cfg.abr?rutDe(cfg.abr):'')}" placeholder="12.345.678-9" style="font-size:15px;padding:12px 10px">
+      </label>
       <label class="f"><span>Nombre completo para los informes (con dos apellidos)</span>
         <input class="ip" id="cFull" value="${h(cfg.abr?nombreCompleto(cfg.abr):'')}" placeholder="Ej: Valeria Osorio Pérez" style="font-size:15px;padding:12px 10px">
       </label>
@@ -582,7 +586,9 @@ function rCfg(){
     <div class="cd">
       <b style="font-size:13px;color:#475569">🔒 Datos del programa</b>
       <label class="f mt"><span>Coordinador</span><input class="ip" id="cK" value="${h(cfg.coord)}"></label>
-      <label class="f"><span>Contraparte</span><input class="ip" id="cP" value="${h(cfg.contra)}"></label>
+      <label class="f"><span>Contraparte municipal</span><input class="ip" id="cP" value="${h(cfg.contra)}"></label>
+      <label class="f"><span>Ejecutiva/o INDAP (firma el informe INDAP)</span><input class="ip" id="cE" value="${h(cfg.ejecutiva||'Beatriz Baquedano')}"></label>
+      <label class="f"><span>Cargo ejecutiva/o INDAP</span><input class="ip" id="cCE" value="${h(cfg.cEjecutiva||'Ejecutiva INDAP · Agencia de Área Las Cabras')}"></label>
       <div class="g2">
         <label class="f"><span>Depto.</span><input class="ip" id="cD" value="${h(cfg.depto)}"></label>
         <label class="f"><span>Unidad</span><input class="ip" id="cU" value="${h(cfg.unidad)}"></label>
@@ -637,6 +643,10 @@ function saveCfg(){
   if(full){cfg.nombres=cfg.nombres||{};cfg.nombres[cfg.abr]=full}
   cfg.coord=document.getElementById('cK')?.value||cfg.coord;
   cfg.contra=document.getElementById('cP')?.value||cfg.contra;
+  cfg.ejecutiva=document.getElementById('cE')?.value||cfg.ejecutiva||'Beatriz Baquedano';
+  cfg.cEjecutiva=document.getElementById('cCE')?.value||cfg.cEjecutiva||'Ejecutiva INDAP · Agencia de Área Las Cabras';
+  const rutV=(document.getElementById('cRut')?.value||'').trim();
+  if(rutV){cfg.ruts=cfg.ruts||{};cfg.ruts[cfg.abr]=rutV;cfg.rut=rutV}
   cfg.depto=document.getElementById('cD')?.value||cfg.depto;
   cfg.unidad=document.getElementById('cU')?.value||cfg.unidad;
   const ak=document.getElementById('cApi')?.value?.trim();
@@ -1209,6 +1219,13 @@ function rInf(){
         <option value="__todos__">Todos los asesores</option>
         ${EQUIPO.filter(e=>e.abr!==cfg.abr).map(e=>'<option value="'+e.abr+'">'+e.nombre+'</option>').join('')}
       </select>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:8px">
+        <span class="mu">Firmas del informe INDAP</span>
+        <select class="ip" id="gDest" style="width:auto;display:inline-block" onchange="window._gDest=this.value">
+          <option value="muni" ${(window._gDest||'muni')==='muni'?'selected':''}>Municipalidad (contraparte ${h((cfg.contra||'').split(' ')[0])})</option>
+          <option value="indap" ${window._gDest==='indap'?'selected':''}>INDAP (ejecutiva ${h((cfg.ejecutiva||'Beatriz Baquedano').split(' ')[0])})</option>
+        </select>
+      </div>
     </div>
     <div class="cd">
       <b style="font-size:13px">📊 Informe Semanal</b>
@@ -1604,7 +1621,8 @@ function resumenPorRubro(vt,asesorSel){
   const normR=r=>(r||'').toString().replace(/[\s.]/g,'').toUpperCase();
   const normT=s=>(s||'').replace(/\.\s*/g,'.').toUpperCase().trim();
   const byRut={};U.forEach(u=>byRut[normR(u.rut)]=u);
-  const asignados=asesorSel&&asesorSel!=='__todos__'?U.filter(u=>normT(u.tecnico)===normT(asesorSel)):U;
+  const eqSel=EQUIPO.find(e=>e.abr===asesorSel);
+  const asignados=(eqSel&&eqSel.cargo==='Asesor Técnico')?U.filter(u=>normT(u.tecnico)===normT(asesorSel)):U; // AP y coordinador atienden todo el programa
   const rub={};
   const key=r=>(r||'').toString().trim().toUpperCase()||'SIN RUBRO';
   asignados.forEach(u=>{const k=key(u.rubro);rub[k]=rub[k]||{rubro:k,asignados:0,visitados:new Set(),visitas:0,obs:[]};rub[k].asignados++});
@@ -1733,7 +1751,7 @@ async function gI(periodo,formato){
       rows.push(new D.TableRow({cantSplit:true,children:vals.map((t,k)=>cell(par(run(t,{size:k===4?17:18,bold:k===0}),{spacing:{after:0},alignment:k>=1&&k<=3?D.AlignmentType.CENTER:k===4?D.AlignmentType.JUSTIFIED:D.AlignmentType.LEFT}),
         {width:{size:cw[k],type:D.WidthType.DXA},verticalAlign:D.VerticalAlign.TOP,shading:i%2?{fill:LIGHT,type:D.ShadingType.CLEAR}:undefined,borders:{...noB,bottom:{style:D.BorderStyle.SINGLE,size:4,color:LINE}}}))}))});
     body.push(new D.Table({rows,columnWidths:cw,width:{size:W,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED}));
-    body.push(par(run('Usuarios = asignados al asesor en la nómina · Visitados = usuarios distintos con visita técnica en el período.',{size:15,italics:true,color:GRAY}),{spacing:{before:60,after:120}}));
+    body.push(par(run('Usuarios = usuarios del rubro en la cartera del asesor (todo el programa para asesor profesional y coordinador) · Visitados = usuarios distintos con visita técnica en el período.',{size:15,italics:true,color:GRAY}),{spacing:{before:60,after:120}}));
   }
 
   // ---------- Visitas técnicas ----------
@@ -1852,7 +1870,8 @@ async function gIndap(periodo){
     par(run((esSem?'Semana '+mesNom.replace(/\D/g,''):mesNom.charAt(0)+mesNom.slice(1).toLowerCase())+' · 2026',{bold:true,size:44,color:NAVY}),{spacing:{after:40}}),
     par(run('Programa PRODESAL Peumo  ·  Unidad Operativa '+(cfg.unidad||'PRODESAL Peumo')+'  ·  INDAP',{size:18,color:GRAY}),{spacing:{after:240}})
   ];
-  const ficha=[['Nombre',asesorNombre],['RUT',cfg.rut||'—'],['Cargo',asesorCargo],['Unidad operativa',cfg.unidad||'PRODESAL Peumo'],[(esSem?'Semana':'Mes')+' de rendición',mesNom+' 2026'],['Nº visitas realizadas',String(vt.length)]];
+  const {asesorSel}=getFilteredVis(periodo,'ind');const dest=document.getElementById('gDest')?.value||window._gDest||'muni';
+  const ficha=[['Nombre',asesorNombre],['RUT',rutDe(asesorSel)||'—'],['Cargo',asesorCargo],['Unidad operativa',cfg.unidad||'PRODESAL Peumo'],[(esSem?'Semana':'Mes')+' de rendición',mesNom+' 2026'],['Nº visitas realizadas',String(vt.length)]];
   body.push(new D.Table({width:{size:W,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,
     rows:ficha.map(([k,v])=>new D.TableRow({children:[
       cell(par(run(k.toUpperCase(),{size:16,bold:true,color:GRAY,characterSpacing:15}),{spacing:{after:0}}),{width:{size:2900,type:D.WidthType.DXA},shading:{fill:LIGHT,type:D.ShadingType.CLEAR},borders:{...noB,bottom:{style:D.BorderStyle.SINGLE,size:4,color:'FFFFFF'}}}),
@@ -1893,7 +1912,9 @@ async function gIndap(periodo){
   // firmas: asesor y coordinador
   body.push(par(run(''),{spacing:{before:600}}));
   body.push(new D.Table({width:{size:W,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,rows:[new D.TableRow({cantSplit:true,children:[
-    K.firma(asesorNombre,asesorCargo,'Programa PRODESAL Peumo',W/2),K.firma(cfg.coord||'',cfg.cCoord||'Coordinador Programa PRODESAL','',W/2)]})]}));
+    K.firma(asesorNombre,asesorCargo,(rutDe(asesorSel)?'RUT '+rutDe(asesorSel):'Programa PRODESAL Peumo'),W/3),
+    K.firma(cfg.coord||'',cfg.cCoord||'Coordinador Programa PRODESAL','Programa PRODESAL Peumo',W/3),
+    dest==='indap'?K.firma(cfg.ejecutiva||'Beatriz Baquedano',cfg.cEjecutiva||'Ejecutiva INDAP · Agencia de Área Las Cabras','',W/3):K.firma(cfg.contra||'',cfg.cContra||'Contraparte Entidad Ejecutora',cfg.depto||'',W/3)]})]}));
   const {header,footer}=K.frame();
   const docObj=new D.Document({creator:asesorNombre,title:fn,styles:K.styles,sections:[{properties:K.pageProps,headers:{default:header},footers:{default:footer},children:body}]});
   await K.descargar(docObj,fn);
@@ -1907,7 +1928,7 @@ async function gPDF(periodo,tipo){
   const esc=h;
   const css='<style>@page{size:letter;margin:1.6cm 1.7cm 1.5cm}body{font-family:Calibri,"Segoe UI",Arial,sans-serif;font-size:10pt;color:#262626;margin:0;line-height:1.38}'
     +(tipo==='xls'
-      ?'table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 7px;vertical-align:top}.ti{background:#5B9BD5;color:#fff;font-weight:bold;text-align:center;padding:8px}.sc{background:#DEEBF6;font-weight:bold}.th{background:#D6E4F0;font-weight:bold;text-align:center;font-size:9pt}.c{text-align:center}td.c{vertical-align:middle}pre{white-space:pre-wrap;font:inherit;margin:0}.tit{font-weight:bold;color:#1F3864;margin-top:6px}.meta{font-size:8pt;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:#595959;margin:2px 0}.j{text-align:justify;margin:0 0 5px}.vis th{background:#1F3864;color:#fff;font-size:7.5pt;letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:3px 5px;border:none}.vis td{padding:2px 5px;border:none;border-bottom:1px solid #BFC7D1}.vis tr:nth-child(even) td{background:#F2F5F9}'
+      ?'table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 7px;vertical-align:top}.ti{background:#5B9BD5;color:#fff;font-weight:bold;text-align:center;padding:8px}.sc{background:#DEEBF6;font-weight:bold}.th{background:#D6E4F0;font-weight:bold;text-align:center;font-size:9pt}.c{text-align:center}td.c{vertical-align:middle}pre{white-space:pre-wrap;font:inherit;margin:0}.tit{font-weight:bold;color:#1F3864;margin-top:6px}.meta{font-size:8pt;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:#595959;margin:2px 0}.j{text-align:justify;margin:0 0 5px}.vis th{background:#1F3864;color:#fff;font-size:7.5pt;letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:3px 5px;border:none}.vis td{padding:2px 5px;border:none;border-bottom:1px solid #BFC7D1}.vis tr:nth-child(even) td{background:#F2F5F9}.firmas{margin-top:34px;page-break-inside:avoid;border:none}.firmas td{width:33%;text-align:center;vertical-align:bottom;padding:0 12px;border:none}.firmas .ln{border-top:1.2px solid #1F3864;margin:36px 0 5px}.firmas b{color:#1F3864;font-size:9pt}.firmas span{color:#595959;font-size:8pt}'
       :'.kicker{font-size:8.5pt;font-weight:bold;letter-spacing:.22em;text-transform:uppercase;color:#2E75B6;margin-top:6px}h1{font-size:23pt;color:#1F3864;margin:2px 0 2px;font-weight:bold}.sub{color:#595959;font-size:9pt;margin-bottom:14px}table{border-collapse:collapse;width:100%}.ficha th{width:30%;text-align:left;font-size:8pt;letter-spacing:.08em;text-transform:uppercase;color:#595959;background:#F2F5F9;padding:5px 8px;border-bottom:2px solid #fff}.ficha td{padding:5px 8px;color:#1F3864;border-bottom:1px solid #BFC7D1}h2{display:flex;align-items:baseline;gap:8px;font-size:11pt;letter-spacing:.1em;text-transform:uppercase;color:#1F3864;border-bottom:1.2px solid #2E75B6;padding-bottom:3px;margin:20px 0 8px;page-break-after:avoid}h2 span{color:#2E75B6;font-size:12pt}h3{font-size:10.5pt;color:#1F3864;margin:14px 0 5px;page-break-after:avoid}.j{text-align:justify;margin:0 0 7px}.vis th{background:#1F3864;color:#fff;font-size:8pt;letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:5px 6px}.vis td{padding:4px 6px;border-bottom:1px solid #BFC7D1;font-size:9pt}.vis tr:nth-child(even) td{background:#F2F5F9}.c{text-align:center}.mt{color:#595959;font-size:8pt}.obs b{color:#1F3864}.act{margin-bottom:10px}.tit{font-weight:bold;color:#1F3864;margin-top:8px;page-break-after:avoid}.meta{font-size:8pt;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:#595959;margin:8px 0 3px;page-break-after:avoid}.vac{color:#595959;font-style:italic;font-size:9pt}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 2px}.grid img{width:100%;max-height:7cm;object-fit:cover;border:1px solid #BFC7D1;border-radius:3px;page-break-inside:avoid}.cap{text-align:center;font-size:8pt;font-style:italic;color:#595959;margin-bottom:10px}.firmas{margin-top:34px;page-break-inside:avoid}.firmas td{width:33%;text-align:center;vertical-align:bottom;padding:0 12px}.firmas .ln{border-top:1.2px solid #1F3864;margin:36px 0 5px}.firmas b{color:#1F3864;font-size:9pt}.firmas span{color:#595959;font-size:8pt}')
     +'.hd{display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid '+(tipo==='xls'?'#5B9BD5':'#1F3864')+';padding-bottom:5px;margin-bottom:10px}.ft{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-between;font-size:7pt;color:#595959;border-top:1px solid #BFC7D1;padding-top:3px}.bar{position:fixed;top:0;left:0;right:0;background:#1f2937;color:#fff;padding:8px;text-align:center;font-family:Arial;font-size:13px;z-index:9}.bar b{cursor:pointer;background:#22c55e;padding:5px 12px;border-radius:5px;margin-left:8px}@media print{.bar,.bar-sp{display:none}}</style>';
   const head='<div class="hd"><img src="'+LOGO_INDAP+'" width="62" height="62"><img src="'+LOGO_PRODESAL+'" width="62" height="62"><img src="'+LOGO_PEUMO+'" width="190" height="36"></div>';
@@ -1916,7 +1937,8 @@ async function gPDF(periodo,tipo){
   let html,titulo;
   if(tipo==='xls'){
     const {actividades,vt,mesNom,fn,asesorNombre,asesorCargo,resumen}=await buildActividades(periodo);titulo=fn;
-    const info=[['NOMBRE:',asesorNombre.toUpperCase()],['RUT:',cfg.rut||''],['CARGO:',asesorCargo.toUpperCase()],['UNIDAD OPERATIVA:',cfg.unidad||'PRODESAL Peumo'],[(periodo==='sem'?'SEMANA':'MES')+' DE RENDICIÓN:',mesNom+' 2026'],['Nº VISITAS REALIZADAS:',vt.length]];
+    const dest=document.getElementById('gDest')?.value||window._gDest||'muni';const rutA=rutDe(getFilteredVis(periodo,'ind').asesorSel);
+    const info=[['NOMBRE:',asesorNombre.toUpperCase()],['RUT:',rutA||''],['CARGO:',asesorCargo.toUpperCase()],['UNIDAD OPERATIVA:',cfg.unidad||'PRODESAL Peumo'],[(periodo==='sem'?'SEMANA':'MES')+' DE RENDICIÓN:',mesNom+' 2026'],['Nº VISITAS REALIZADAS:',vt.length]];
     html='<table><tr><td colspan="3" class="ti" style="font-size:12pt">INFORME DE ACTIVIDADES '+(periodo==='sem'?'SEMANAL':'MENSUAL')+' EQUIPO TÉCNICO PRODESAL</td></tr>'
       +info.map(([k,v])=>'<tr><td class="sc" style="width:28%">'+esc(k)+'</td><td colspan="2">'+esc(v)+'</td></tr>').join('')
       +(resumen?'<tr><td colspan="3" class="th">RESUMEN EJECUTIVO</td></tr><tr><td colspan="3"><pre>'+esc(resumen)+'</pre></td></tr>':'')
@@ -1925,7 +1947,8 @@ async function gPDF(periodo,tipo){
       +actividades.map((a,i)=>'<tr><td class="c" style="vertical-align:top"><b>'+(i+1)+'</b></td><td style="vertical-align:top"><b>'+esc(a.nombre)+'</b></td><td>'+a.items.map(it=>(it.titulo?'<div class="tit">'+esc(it.titulo.toUpperCase())+'</div>':'')+(it.meta?'<div class="meta">'+esc(it.meta)+'</div>':'')+(it.texto||'').split(/\n+/).filter(l=>l.trim()).map(l=>'<p class="j">'+esc(l)+'</p>').join('')).join('')+'</td></tr>').join('')
       +'</table>'
       +(vt.length?'<div class="th" style="margin-top:16px;padding:5px;text-align:left">DETALLE DE VISITAS TÉCNICAS — '+vt.length+' VISITA'+(vt.length===1?'':'S')+'</div><table class="vis" style="font-size:8pt"><thead><tr><th>Fecha</th><th>RUT</th><th>Agricultor/a</th><th>Tipo</th><th class="c">Asesor</th><th class="c">Folio</th></tr></thead><tbody>'+vt.map(v=>'<tr><td>'+esc(fmtCorto(v.fecha))+'</td><td>'+esc(v.rut)+'</td><td>'+esc(v.agricultor)+'</td><td>Asesoría técnica</td><td class="c">'+esc(v.asesor||cfg.abr)+'</td><td class="c">'+esc(v.folio)+'</td></tr>').join('')+'</tbody></table>':'')
-      +'<table style="margin-top:60px;border:none"><tr><td style="border:none;width:50%;text-align:center"><div style="border-top:1px solid #333;width:70%;margin:0 auto;padding-top:4px"><b>'+esc(asesorNombre.toUpperCase())+'</b><br><u>'+esc(asesorCargo.toUpperCase())+' PROGRAMA PRODESAL</u></div></td><td style="border:none;text-align:center"><div style="border-top:1px solid #333;width:70%;margin:0 auto;padding-top:4px"><b>'+esc((cfg.coord||'').toUpperCase())+'</b><br><u>COORDINADOR PROGRAMA PRODESAL</u></div></td></tr></table>';
+      +'<table class="firmas"><tr>'+[[asesorNombre,asesorCargo,rutA?'RUT '+rutA:'Programa PRODESAL Peumo'],[cfg.coord||'',cfg.cCoord||'Coordinador Programa PRODESAL','Programa PRODESAL Peumo'],dest==='indap'?[cfg.ejecutiva||'Beatriz Baquedano',cfg.cEjecutiva||'Ejecutiva INDAP · Agencia de Área Las Cabras','']:[cfg.contra||'',cfg.cContra||'Contraparte Entidad Ejecutora',cfg.depto||'']]
+        .map(([nm,c,d])=>'<td><div class="ln"></div><b>'+esc(nm.toUpperCase())+'</b><br><span>'+esc(c)+(d?'<br>'+esc(d):'')+'</span></td>').join('')+'</tr></table>';
   }else{
     const {vf,fn,asesorNombre,asesorCargo}=getFilteredVis(periodo,'mun');titulo=fn;
     const ab=cfg.abr||abv(cfg.nombre);
@@ -1945,7 +1968,7 @@ async function gPDF(periodo,tipo){
       html+=sec('Resumen por rubro')+'<p class="j">Síntesis de la atención por rubro productivo: usuarios asignados y visitados, visitas técnicas realizadas y principales recomendaciones entregadas durante el período.</p>'
         +'<table class="vis"><thead><tr><th>Rubro</th><th class="c">Usuarios</th><th class="c">Visitados</th><th class="c">Visitas</th><th>Principales recomendaciones</th></tr></thead><tbody>'
         +rubros.map(r=>'<tr><td><b>'+esc(r.rubro)+'</b></td><td class="c">'+(r.asignados||'—')+'</td><td class="c">'+r.visitados+'</td><td class="c">'+r.visitas+'</td><td style="text-align:justify">'+esc(recs[r.rubro]||'')+'</td></tr>').join('')+'</tbody></table>'
-        +'<p class="mt" style="font-style:italic">Usuarios = asignados al asesor en la nómina · Visitados = usuarios distintos con visita técnica en el período.</p>'}
+        +'<p class="mt" style="font-style:italic">Usuarios = usuarios del rubro en la cartera del asesor (todo el programa para asesor profesional y coordinador) · Visitados = usuarios distintos con visita técnica en el período.</p>'}
     html+=sec('Visitas técnicas')+'<p class="j">En el marco de la estructura definida por INDAP, las visitas del '+esc(asesorCargo.toLowerCase())+' tienen como propósito la evaluación en terreno, la entrega de información al usuario y la validación de rendiciones o avances de proyectos. Durante el período se realizaron '+vt.length+' visita'+(vt.length===1?'':'s')+' técnica'+(vt.length===1?'':'s')+'.</p>';
     if(vt.length){
       html+='<table class="vis"><thead><tr><th>Fecha</th><th>RUT</th><th>Agricultor/a</th><th>Tipo</th><th class="c">Asesor</th><th class="c">Folio</th></tr></thead><tbody>'

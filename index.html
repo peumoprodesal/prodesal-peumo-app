@@ -1232,7 +1232,7 @@ function rInf(){
     </div>
     <div class="cd">
       <b style="font-size:13px">📊 Informe Semanal</b>
-      <p class="mu" style="margin:4px 0 8px">Genera el informe municipal o el informe INDAP (.docx). Con 🖨️ se abre la vista de impresión: elige «Guardar como PDF» para un archivo más liviano.</p>
+      <p class="mu" style="margin:4px 0 8px">Informe semanal para la Municipalidad (.docx). Con 🖨️ se abre la vista de impresión: elige «Guardar como PDF» para un archivo más liviano.</p>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <span class="mu">Semana</span>
         <input type="number" class="ip" id="gs" value="${sem}" min="1" max="53" style="width:65px;display:inline-block" onchange="gsSel=+this.value;R()">
@@ -1240,9 +1240,7 @@ function rInf(){
       </div>
       <div style="display:flex;gap:6px;flex-wrap:wrap">
         <button class="bt bt-g bt-s" onclick="gI('sem','mun')">📝 Informe .docx</button>
-        <button class="bt bt-b bt-s" onclick="gIndap('sem')">📋 INDAP .docx</button>
         <button class="bt bt-o bt-s" onclick="gPDF('sem','inf')">🖨️ Informe PDF</button>
-        <button class="bt bt-o bt-s" onclick="gPDF('sem','xls')">🖨️ INDAP PDF</button>
         <button class="bt bt-s" onclick="exportSemana()" title="Guarda actividades, fotos y visitas de la semana en un archivo para cargarlas después en el informe mensual">💾 Respaldo semana</button>
       </div>
       <div style="margin-top:12px;border-top:1px solid #e5e7eb;padding-top:10px">
@@ -1263,7 +1261,7 @@ function rInf(){
     </div>
     <div class="cd">
       <b style="font-size:13px">📅 Informe Mensual</b>
-      <p class="mu" style="margin:4px 0 8px">Informes del mes seleccionado</p>
+      <p class="mu" style="margin:4px 0 8px">Informe municipal e informe INDAP del mes seleccionado</p>
       <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <span class="mu">Mes</span>
         <select class="ip" id="gm" style="width:130px;display:inline-block" onchange="gmSel=+this.value;R()">${MESES.map((m,i)=>'<option value="'+i+'" '+(i===mi?'selected':'')+'>'+m[0].toUpperCase()+m.slice(1)+'</option>').join('')}</select>

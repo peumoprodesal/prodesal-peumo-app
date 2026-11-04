@@ -515,18 +515,20 @@ const td=()=>new Date().toISOString().slice(0,10);
 const h=s=>String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 let _t;const nf=m=>{clearTimeout(_t);document.getElementById('tt').innerHTML=`<div class="toast">${m}</div>`;_t=setTimeout(()=>document.getElementById('tt').innerHTML='',2200)};
 
+// Normaliza para buscar: minúsculas, sin tildes ni puntos de RUT
+const nq=t=>(t||'').toString().toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/\./g,'');
 let _sd;function ds(v){clearTimeout(_sd);_sd=setTimeout(()=>{sq=v;filterNom()},400)}
-let _sv;function filterVisCards(q){window._visQ=q;clearTimeout(_sv);_sv=setTimeout(()=>{const qq=(q||'').toLowerCase().trim();let n=0;document.querySelectorAll('.vcard').forEach(c=>{const ok=!qq||c.dataset.s.includes(qq);c.style.display=ok?'':'none';if(ok)n++});const el=document.getElementById('visCount');if(el)el.textContent=qq?n+' visita(s) coinciden':''},200)}
+let _sv;function filterVisCards(q){window._visQ=q;clearTimeout(_sv);_sv=setTimeout(()=>{const qq=nq(q).trim();let n=0;document.querySelectorAll('.vcard').forEach(c=>{const ok=!qq||qq.split(/\s+/).every(w=>c.dataset.s.includes(w));c.style.display=ok?'':'none';if(ok)n++});const el=document.getElementById('visCount');if(el)el.textContent=qq?n+' visita(s) coinciden':''},200)}
 let nomBuilt=false;
 function filterNom(){
   const cards=document.querySelectorAll('.ucard');
   if(!cards.length)return;
-  const q=sq.toLowerCase();
+  const q=nq(sq).trim();
   let shown=0;
   cards.forEach(c=>{
     const t=c.dataset.t||'';const f=c.dataset.f||'';const s=c.dataset.s||'';
     let show=true;
-    if(q&&!s.includes(q))show=false;
+    if(q&&!q.split(/\s+/).every(w=>s.includes(w)))show=false;
     if(ftec&&t!==ftec)show=false;
     if(ffm&&f!==ffm)show=false;
     if(ffe==='si'&&!u.encuesta_2026)show=false;
@@ -588,7 +590,7 @@ function rCfg(){
       <label class="f mt"><span>Coordinador</span><input class="ip" id="cK" value="${h(cfg.coord)}"></label>
       <label class="f"><span>Contraparte municipal</span><input class="ip" id="cP" value="${h(cfg.contra)}"></label>
       <label class="f"><span>Ejecutiva/o INDAP (firma el informe INDAP)</span><input class="ip" id="cE" value="${h(cfg.ejecutiva||'Beatriz Baquedano')}"></label>
-      <label class="f"><span>Cargo ejecutiva/o INDAP</span><input class="ip" id="cCE" value="${h(cfg.cEjecutiva||'Ejecutiva INDAP · Agencia de Área Las Cabras')}"></label>
+      <label class="f"><span>Cargo ejecutiva/o INDAP</span><input class="ip" id="cCE" value="${h(cfg.cEjecutiva||'Ejecutiva INDAP')}"></label>
       <div class="g2">
         <label class="f"><span>Depto.</span><input class="ip" id="cD" value="${h(cfg.depto)}"></label>
         <label class="f"><span>Unidad</span><input class="ip" id="cU" value="${h(cfg.unidad)}"></label>
@@ -644,7 +646,7 @@ function saveCfg(){
   cfg.coord=document.getElementById('cK')?.value||cfg.coord;
   cfg.contra=document.getElementById('cP')?.value||cfg.contra;
   cfg.ejecutiva=document.getElementById('cE')?.value||cfg.ejecutiva||'Beatriz Baquedano';
-  cfg.cEjecutiva=document.getElementById('cCE')?.value||cfg.cEjecutiva||'Ejecutiva INDAP · Agencia de Área Las Cabras';
+  cfg.cEjecutiva=document.getElementById('cCE')?.value||cfg.cEjecutiva||'Ejecutiva INDAP';
   const rutV=(document.getElementById('cRut')?.value||'').trim();
   if(rutV){cfg.ruts=cfg.ruts||{};cfg.ruts[cfg.abr]=rutV;cfg.rut=rutV}
   cfg.depto=document.getElementById('cD')?.value||cfg.depto;
@@ -702,7 +704,7 @@ function rNom(){
     const fo=u.sii==='Con inicio de actividades'||u.sii==='Con Iniciación de Actividades';
     const siiIcon=fo?'✅':u.sii==='Registro de Subsistencia'?'📋':u.sii==='Régimen General'?'📊':u.sii==='Autoconsumo'?'🏠':u.sii==='Evaluación'?'🔍':'⏳';
     const siiClass=fo?'tg-g':(u.sii&&!u.sii.includes('Sin'))?'tg-b':'tg-y';
-    const searchStr=((u.apellidos||'')+' '+(u.nombres||'')+' '+(u.rut||'')).toLowerCase();
+    const searchStr=nq((u.apellidos||'')+' '+(u.nombres||'')+' '+(u.rut||'')+' '+(u.sector||''));
     return `<div class="cd ucard" data-s="${h(searchStr)}" data-t="${u.tecnico||''}" data-f="${u.sii||''}" onclick="oF(${u.n})" style="cursor:pointer">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="flex:1;min-width:0">
@@ -841,7 +843,7 @@ function rVL(){
       <input class="ip" id="visFilterUser" value="${h(window._visQ||'')}" placeholder="🔎 Buscar usuario por nombre, RUT, sector o folio..." style="width:100%;font-size:12px;margin-top:6px" oninput="filterVisCards(this.value)">
       <span class="mu" id="visCount" style="font-size:11px"></span>
     </div>
-    ${!s.length?'<div class="empty"><i>📝</i>Sin visitas registradas.<br>Ve a 👥 Nómina, busca un agricultor y registra desde ahí.</div>':s.map(v=>`<div class="cd vcard" data-s="${h(((v.agricultor||'')+' '+(v.rut||'')+' '+(v.sector||'')+' '+(v.rubro||'')+' '+(v.folio||'')).toLowerCase())}">
+    ${!s.length?'<div class="empty"><i>📝</i>Sin visitas registradas.<br>Ve a 👥 Nómina, busca un agricultor y registra desde ahí.</div>':s.map(v=>`<div class="cd vcard" data-s="${h(nq((v.agricultor||'')+' '+(v.rut||'')+' '+(v.sector||'')+' '+(v.rubro||'')+' '+(v.folio||'')))}">
       <div style="display:flex;justify-content:space-between;align-items:flex-start">
         <div style="flex:1;min-width:0">
           <b style="font-size:13px">${h(v.agricultor)}</b>
@@ -917,11 +919,11 @@ function acS(val){
     const l=document.getElementById('acL');
     if(!l)return;
     if(!val||val.length<2){l.classList.remove('show');l.innerHTML='';return}
-    const q=val.toLowerCase();
+    const q=nq(val).trim();const ws=q.split(/\s+/).filter(Boolean);
     const m=[];
-    for(let i=0;i<U.length&&m.length<6;i++){
-      const u=U[i];
-      if(((u.apellidos||'')+' '+(u.nombres||'')).toLowerCase().includes(q)||(u.rut||'').includes(q))m.push(u);
+    for(let i=0;i<U.length&&m.length<8;i++){
+      const u=U[i];const cad=nq((u.apellidos||'')+' '+(u.nombres||'')+' '+(u.rut||''));
+      if(ws.every(w=>cad.includes(w)))m.push(u);
     }
     if(!m.length){l.classList.remove('show');return}
     l.innerHTML=m.map(u=>`<div class="aci" onmousedown="acP(${u.n})">${h(u.nombres+' '+u.apellidos)}<small>${u.rut} · ${u.rubro} · ${u.sector}</small></div>`).join('');
@@ -1223,7 +1225,7 @@ function rInf(){
         <span class="mu">Firmas del informe INDAP</span>
         <select class="ip" id="gDest" style="width:auto;display:inline-block" onchange="window._gDest=this.value">
           <option value="muni" ${(window._gDest||'muni')==='muni'?'selected':''}>Municipalidad (contraparte ${h((cfg.contra||'').split(' ')[0])})</option>
-          <option value="indap" ${window._gDest==='indap'?'selected':''}>INDAP (ejecutiva ${h((cfg.ejecutiva||'Beatriz Baquedano').split(' ')[0])})</option>
+          <option value="indap" ${window._gDest==='indap'?'selected':''}>INDAP (contraparte + ejecutiva ${h((cfg.ejecutiva||'Beatriz Baquedano').split(' ')[0])})</option>
         </select>
       </div>
     </div>
@@ -1667,11 +1669,11 @@ function docxKit(){
 
   const styles={default:{document:{run:{font:F,size:20}}}};
   const pageProps={page:{size:{width:12240,height:15840},margin:{top:1700,right:1170,bottom:1200,left:1170,header:400,footer:400}}};
-  const firma=(n,c,d,w=3300)=>cell([par(run(''),{spacing:{before:700,after:0},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:NAVY,space:1}}}),
-      par(run((n||'').toUpperCase(),{bold:true,size:18,color:NAVY}),{alignment:D.AlignmentType.CENTER,spacing:{before:80,after:0}}),
-      par(run(c||'',{size:16,color:GRAY}),{alignment:D.AlignmentType.CENTER,spacing:{after:0}}),
-      par(run(d||'\u00a0',{size:16,color:GRAY}),{alignment:D.AlignmentType.CENTER,spacing:{after:0}})],
-    {width:{size:w,type:D.WidthType.DXA},margins:{top:0,bottom:0,left:200,right:200},verticalAlign:D.VerticalAlign.BOTTOM});
+  const firma=(n,c,d,w=3300)=>{const sm=w<3000;return cell([par(run(''),{spacing:{before:700,after:0},border:{bottom:{style:D.BorderStyle.SINGLE,size:6,color:NAVY,space:1}}}),
+      par(run((n||'').toUpperCase(),{bold:true,size:sm?16:18,color:NAVY}),{alignment:D.AlignmentType.CENTER,spacing:{before:80,after:0}}),
+      par(run(c||'',{size:sm?14:16,color:GRAY}),{alignment:D.AlignmentType.CENTER,spacing:{after:0}}),
+      par(run(d||'\u00a0',{size:sm?14:16,color:GRAY}),{alignment:D.AlignmentType.CENTER,spacing:{after:0}})],
+    {width:{size:w,type:D.WidthType.DXA},margins:{top:0,bottom:0,left:sm?100:200,right:sm?100:200},verticalAlign:D.VerticalAlign.BOTTOM})};
   const frame=()=>{
   let logoIndap=null,logoPeumo=null,logoProd=null;
   try{logoIndap=img(LOGO_INDAP,62,62)}catch(e){}
@@ -1912,9 +1914,7 @@ async function gIndap(periodo){
   // firmas: asesor y coordinador
   body.push(par(run(''),{spacing:{before:600}}));
   body.push(new D.Table({width:{size:W,type:D.WidthType.DXA},layout:D.TableLayoutType.FIXED,rows:[new D.TableRow({cantSplit:true,children:[
-    K.firma(asesorNombre,asesorCargo,(rutDe(asesorSel)?'RUT '+rutDe(asesorSel):'Programa PRODESAL Peumo'),W/3),
-    K.firma(cfg.coord||'',cfg.cCoord||'Coordinador Programa PRODESAL','Programa PRODESAL Peumo',W/3),
-    dest==='indap'?K.firma(cfg.ejecutiva||'Beatriz Baquedano',cfg.cEjecutiva||'Ejecutiva INDAP · Agencia de Área Las Cabras','',W/3):K.firma(cfg.contra||'',cfg.cContra||'Contraparte Entidad Ejecutora',cfg.depto||'',W/3)]})]}));
+    ...(()=>{const nF=dest==='indap'?4:3,fw=Math.floor(W/nF);const f=[K.firma(asesorNombre,asesorCargo,(rutDe(asesorSel)?'RUT '+rutDe(asesorSel):'Programa PRODESAL Peumo'),fw),K.firma(cfg.coord||'',cfg.cCoord||'Coordinador Programa PRODESAL','Programa PRODESAL Peumo',fw),K.firma(cfg.contra||'',cfg.cContra||'Contraparte Entidad Ejecutora',cfg.depto||'',fw)];if(dest==='indap')f.push(K.firma(cfg.ejecutiva||'Beatriz Baquedano',cfg.cEjecutiva||'Ejecutiva INDAP','Agencia de Área Las Cabras',fw));return f})()]})]}));
   const {header,footer}=K.frame();
   const docObj=new D.Document({creator:asesorNombre,title:fn,styles:K.styles,sections:[{properties:K.pageProps,headers:{default:header},footers:{default:footer},children:body}]});
   await K.descargar(docObj,fn);
@@ -1928,7 +1928,7 @@ async function gPDF(periodo,tipo){
   const esc=h;
   const css='<style>@page{size:letter;margin:1.6cm 1.7cm 1.5cm}body{font-family:Calibri,"Segoe UI",Arial,sans-serif;font-size:10pt;color:#262626;margin:0;line-height:1.38}'
     +(tipo==='xls'
-      ?'table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 7px;vertical-align:top}.ti{background:#5B9BD5;color:#fff;font-weight:bold;text-align:center;padding:8px}.sc{background:#DEEBF6;font-weight:bold}.th{background:#D6E4F0;font-weight:bold;text-align:center;font-size:9pt}.c{text-align:center}td.c{vertical-align:middle}pre{white-space:pre-wrap;font:inherit;margin:0}.tit{font-weight:bold;color:#1F3864;margin-top:6px}.meta{font-size:8pt;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:#595959;margin:2px 0}.j{text-align:justify;margin:0 0 5px}.vis th{background:#1F3864;color:#fff;font-size:7.5pt;letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:3px 5px;border:none}.vis td{padding:2px 5px;border:none;border-bottom:1px solid #BFC7D1}.vis tr:nth-child(even) td{background:#F2F5F9}.firmas{margin-top:34px;page-break-inside:avoid;border:none}.firmas td{width:33%;text-align:center;vertical-align:bottom;padding:0 12px;border:none}.firmas .ln{border-top:1.2px solid #1F3864;margin:36px 0 5px}.firmas b{color:#1F3864;font-size:9pt}.firmas span{color:#595959;font-size:8pt}'
+      ?'table{border-collapse:collapse;width:100%}td,th{border:1px solid #999;padding:4px 7px;vertical-align:top}.ti{background:#5B9BD5;color:#fff;font-weight:bold;text-align:center;padding:8px}.sc{background:#DEEBF6;font-weight:bold}.th{background:#D6E4F0;font-weight:bold;text-align:center;font-size:9pt}.c{text-align:center}td.c{vertical-align:middle}pre{white-space:pre-wrap;font:inherit;margin:0}.tit{font-weight:bold;color:#1F3864;margin-top:6px}.meta{font-size:8pt;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:#595959;margin:2px 0}.j{text-align:justify;margin:0 0 5px}.vis th{background:#1F3864;color:#fff;font-size:7.5pt;letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:3px 5px;border:none}.vis td{padding:2px 5px;border:none;border-bottom:1px solid #BFC7D1}.vis tr:nth-child(even) td{background:#F2F5F9}.firmas{margin-top:34px;page-break-inside:avoid;border:none}.firmas td{text-align:center;vertical-align:bottom;padding:0 8px;border:none}.firmas .ln{border-top:1.2px solid #1F3864;margin:36px 0 5px}.firmas b{color:#1F3864;font-size:9pt}.firmas span{color:#595959;font-size:8pt}'
       :'.kicker{font-size:8.5pt;font-weight:bold;letter-spacing:.22em;text-transform:uppercase;color:#2E75B6;margin-top:6px}h1{font-size:23pt;color:#1F3864;margin:2px 0 2px;font-weight:bold}.sub{color:#595959;font-size:9pt;margin-bottom:14px}table{border-collapse:collapse;width:100%}.ficha th{width:30%;text-align:left;font-size:8pt;letter-spacing:.08em;text-transform:uppercase;color:#595959;background:#F2F5F9;padding:5px 8px;border-bottom:2px solid #fff}.ficha td{padding:5px 8px;color:#1F3864;border-bottom:1px solid #BFC7D1}h2{display:flex;align-items:baseline;gap:8px;font-size:11pt;letter-spacing:.1em;text-transform:uppercase;color:#1F3864;border-bottom:1.2px solid #2E75B6;padding-bottom:3px;margin:20px 0 8px;page-break-after:avoid}h2 span{color:#2E75B6;font-size:12pt}h3{font-size:10.5pt;color:#1F3864;margin:14px 0 5px;page-break-after:avoid}.j{text-align:justify;margin:0 0 7px}.vis th{background:#1F3864;color:#fff;font-size:8pt;letter-spacing:.06em;text-transform:uppercase;text-align:left;padding:5px 6px}.vis td{padding:4px 6px;border-bottom:1px solid #BFC7D1;font-size:9pt}.vis tr:nth-child(even) td{background:#F2F5F9}.c{text-align:center}.mt{color:#595959;font-size:8pt}.obs b{color:#1F3864}.act{margin-bottom:10px}.tit{font-weight:bold;color:#1F3864;margin-top:8px;page-break-after:avoid}.meta{font-size:8pt;font-weight:bold;letter-spacing:.08em;text-transform:uppercase;color:#595959;margin:8px 0 3px;page-break-after:avoid}.vac{color:#595959;font-style:italic;font-size:9pt}.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:6px 0 2px}.grid img{width:100%;max-height:7cm;object-fit:cover;border:1px solid #BFC7D1;border-radius:3px;page-break-inside:avoid}.cap{text-align:center;font-size:8pt;font-style:italic;color:#595959;margin-bottom:10px}.firmas{margin-top:34px;page-break-inside:avoid}.firmas td{width:33%;text-align:center;vertical-align:bottom;padding:0 12px}.firmas .ln{border-top:1.2px solid #1F3864;margin:36px 0 5px}.firmas b{color:#1F3864;font-size:9pt}.firmas span{color:#595959;font-size:8pt}')
     +'.hd{display:flex;justify-content:space-between;align-items:center;border-bottom:1.5px solid '+(tipo==='xls'?'#5B9BD5':'#1F3864')+';padding-bottom:5px;margin-bottom:10px}.ft{position:fixed;bottom:0;left:0;right:0;display:flex;justify-content:space-between;font-size:7pt;color:#595959;border-top:1px solid #BFC7D1;padding-top:3px}.bar{position:fixed;top:0;left:0;right:0;background:#1f2937;color:#fff;padding:8px;text-align:center;font-family:Arial;font-size:13px;z-index:9}.bar b{cursor:pointer;background:#22c55e;padding:5px 12px;border-radius:5px;margin-left:8px}@media print{.bar,.bar-sp{display:none}}</style>';
   const head='<div class="hd"><img src="'+LOGO_INDAP+'" width="62" height="62"><img src="'+LOGO_PRODESAL+'" width="62" height="62"><img src="'+LOGO_PEUMO+'" width="190" height="36"></div>';
@@ -1947,7 +1947,7 @@ async function gPDF(periodo,tipo){
       +actividades.map((a,i)=>'<tr><td class="c" style="vertical-align:top"><b>'+(i+1)+'</b></td><td style="vertical-align:top"><b>'+esc(a.nombre)+'</b></td><td>'+a.items.map(it=>(it.titulo?'<div class="tit">'+esc(it.titulo.toUpperCase())+'</div>':'')+(it.meta?'<div class="meta">'+esc(it.meta)+'</div>':'')+(it.texto||'').split(/\n+/).filter(l=>l.trim()).map(l=>'<p class="j">'+esc(l)+'</p>').join('')).join('')+'</td></tr>').join('')
       +'</table>'
       +(vt.length?'<div class="th" style="margin-top:16px;padding:5px;text-align:left">DETALLE DE VISITAS TÉCNICAS — '+vt.length+' VISITA'+(vt.length===1?'':'S')+'</div><table class="vis" style="font-size:8pt"><thead><tr><th>Fecha</th><th>RUT</th><th>Agricultor/a</th><th>Tipo</th><th class="c">Asesor</th><th class="c">Folio</th></tr></thead><tbody>'+vt.map(v=>'<tr><td>'+esc(fmtCorto(v.fecha))+'</td><td>'+esc(v.rut)+'</td><td>'+esc(v.agricultor)+'</td><td>Asesoría técnica</td><td class="c">'+esc(v.asesor||cfg.abr)+'</td><td class="c">'+esc(v.folio)+'</td></tr>').join('')+'</tbody></table>':'')
-      +'<table class="firmas"><tr>'+[[asesorNombre,asesorCargo,rutA?'RUT '+rutA:'Programa PRODESAL Peumo'],[cfg.coord||'',cfg.cCoord||'Coordinador Programa PRODESAL','Programa PRODESAL Peumo'],dest==='indap'?[cfg.ejecutiva||'Beatriz Baquedano',cfg.cEjecutiva||'Ejecutiva INDAP · Agencia de Área Las Cabras','']:[cfg.contra||'',cfg.cContra||'Contraparte Entidad Ejecutora',cfg.depto||'']]
+      +'<table class="firmas"><tr>'+[[asesorNombre,asesorCargo,rutA?'RUT '+rutA:'Programa PRODESAL Peumo'],[cfg.coord||'',cfg.cCoord||'Coordinador Programa PRODESAL','Programa PRODESAL Peumo'],[cfg.contra||'',cfg.cContra||'Contraparte Entidad Ejecutora',cfg.depto||'']].concat(dest==='indap'?[[cfg.ejecutiva||'Beatriz Baquedano',cfg.cEjecutiva||'Ejecutiva INDAP','Agencia de Área Las Cabras']]:[])
         .map(([nm,c,d])=>'<td><div class="ln"></div><b>'+esc(nm.toUpperCase())+'</b><br><span>'+esc(c)+(d?'<br>'+esc(d):'')+'</span></td>').join('')+'</tr></table>';
   }else{
     const {vf,fn,asesorNombre,asesorCargo}=getFilteredVis(periodo,'mun');titulo=fn;
